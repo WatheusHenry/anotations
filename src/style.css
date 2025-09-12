@@ -1,0 +1,136 @@
+/* Reset e estilos globais */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #ffffff;
+  color: #212529;
+  line-height: 1.6;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Ajustes para dispositivos touch */
+@media (hover: none) and (pointer: coarse) {
+  .note-card:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  
+  .send-btn:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* Ajustes para telas pequenas */
+@media (max-width: 480px) {
+  .app-title {
+    font-size: 18px;
+  }
+  
+  .note-input {
+    font-size: 16px; /* Previne zoom no iOS */
+  }
+  
+  .search-input {
+    font-size: 16px; /* Previne zoom no iOS */
+  }
+}
+
+/* Animações suaves */
+@media (prefers-reduced-motion: no-preference) {
+  * {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+}
+
+/* Modo escuro (se o sistema preferir) */
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #1a1a1a;
+    color: #ffffff;
+  }
+  
+  .app {
+    background: #1a1a1a;
+  }
+  
+  .app-header {
+    background: #1a1a1a;
+    border-bottom-color: #333;
+  }
+  
+  .app-footer {
+    background: #1a1a1a;
+    border-top-color: #333;
+  }
+  
+  .note-card {
+    background: #2d2d2d;
+    border-color: #444;
+    color: #ffffff;
+  }
+  
+  .note-date {
+    color: #aaa;
+  }
+  
+  .delete-btn {
+    color: #aaa;
+  }
+  
+  .delete-btn:hover {
+    background: #444;
+    color: #ff6b6b;
+  }
+  
+  .search-input,
+  .note-input {
+    background: #2d2d2d;
+    border-color: #444;
+    color: #ffffff;
+  }
+  
+  .search-input::placeholder,
+  .note-input::placeholder {
+    color: #aaa;
+  }
+  
+  .search-input:focus,
+  .note-input:focus {
+    border-color: #007bff;
+    background: #333;
+  }
+  
+  .empty-state {
+    color: #aaa;
+  }
+}
