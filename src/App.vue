@@ -625,7 +625,9 @@ const convertFileToBase64 = (file: File): Promise<string> => {
   }
   
   .app-footer {
+    height: 110px;
     padding: 22px 12px 50px 12px;
+    
   }
   
   .input-container {
