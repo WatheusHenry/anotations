@@ -457,7 +457,7 @@ const convertFileToBase64 = (file: File): Promise<string> => {
   backdrop-filter: blur(10px);
   border-top: 1px solid rgba(233, 236, 239, 0.3);
   border-radius: 2.5rem 2.5rem 0 0;
-  padding: 20px 30px;
+  padding: 20px 50px;
   z-index: 10;
   box-shadow: 
     0 3px 30px rgba(0, 0, 0, 0.2),  
@@ -625,7 +625,7 @@ const convertFileToBase64 = (file: File): Promise<string> => {
   }
   
   .app-footer {
-    padding: 22px 12px 40px 12px;
+    padding: 22px 12px 50px 12px;
   }
   
   .input-container {
