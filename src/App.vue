@@ -68,6 +68,11 @@ const addNote = async () => {
         await notesStore.addNote(content)
       }
 
+      // Esconder teclado no mobile
+      if (noteInputRef.value) {
+        noteInputRef.value.blur()
+      }
+
       // Animação de feedback no input
       const inputContainer = document.querySelector('.input-container')
       if (inputContainer) {
@@ -80,6 +85,11 @@ const addNote = async () => {
       console.error('Erro ao salvar nota:', error)
       // Se falhar, adicionar como nota normal
       await notesStore.addNote(content)
+
+      // Esconder teclado mesmo em caso de erro
+      if (noteInputRef.value) {
+        noteInputRef.value.blur()
+      }
     } finally {
       isAddingNote.value = false
     }
@@ -183,6 +193,11 @@ const handleImageUpload = async (event: Event) => {
     try {
       const imageData = await convertFileToBase64(file)
       await notesStore.addImageNote(imageData, file.name)
+
+      // Esconder teclado no mobile se estiver focado
+      if (noteInputRef.value && document.activeElement === noteInputRef.value) {
+        noteInputRef.value.blur()
+      }
 
       // Feedback visual
       const inputContainer = document.querySelector('.input-container')
@@ -408,8 +423,9 @@ const handleSwipeEnd = () => {
 
       <form @submit.prevent="addNote" class="note-form">
         <div class="input-container">
-          <input ref="noteInputRef" v-model="newNote" type="text" placeholder="Salvar uma nota..." class="note-input" enterkeyhint="send"
-            autocomplete="off" autocapitalize="sentences" @keypress="handleKeyPress" @keydown="handleKeyDown" />
+          <input ref="noteInputRef" v-model="newNote" type="text" placeholder="Salvar uma nota..." class="note-input"
+            enterkeyhint="send" autocomplete="off" autocapitalize="sentences" @keypress="handleKeyPress"
+            @keydown="handleKeyDown" />
           <div class="action-buttons">
             <button type="button" @click="triggerImageUpload" class="image-btn" aria-label="Adicionar imagem">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -856,10 +872,12 @@ const handleSwipeEnd = () => {
     transform: scaleX(1);
     background: #e9ecef;
   }
+
   50% {
     transform: scaleX(1.2);
     background: #007bff;
   }
+
   100% {
     transform: scaleX(1);
     background: #007bff;
