@@ -275,6 +275,17 @@ const openImageModal = () => {
     showImageModal.value = true
     // Prevenir scroll do body quando modal está aberto
     document.body.style.overflow = 'hidden'
+
+    // Esconder elementos fixos no mobile para evitar sobreposição
+    const searchContainer = document.querySelector('.search-container')
+    const appFooter = document.querySelector('.app-footer')
+
+    if (searchContainer) {
+      (searchContainer as HTMLElement).style.display = 'none'
+    }
+    if (appFooter) {
+      (appFooter as HTMLElement).style.display = 'none'
+    }
   }
 }
 
@@ -282,6 +293,17 @@ const closeImageModal = () => {
   showImageModal.value = false
   // Restaurar scroll do body
   document.body.style.overflow = ''
+
+  // Restaurar elementos fixos
+  const searchContainer = document.querySelector('.search-container')
+  const appFooter = document.querySelector('.app-footer')
+
+  if (searchContainer) {
+    (searchContainer as HTMLElement).style.display = ''
+  }
+  if (appFooter) {
+    (appFooter as HTMLElement).style.display = ''
+  }
 }
 
 const openLink = () => {
@@ -892,13 +914,15 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(0, 0, 0, 0.95);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 9999;
   padding: 20px;
   animation: modalFadeIn 0.3s ease-out;
+  /* Garantir que fique acima de tudo */
+  isolation: isolate;
 }
 
 @keyframes modalFadeIn {
@@ -924,7 +948,7 @@ onUnmounted(() => {
   position: absolute;
   top: -50px;
   right: 0;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.95);
   border: none;
   border-radius: 50%;
   width: 40px;
@@ -935,7 +959,9 @@ onUnmounted(() => {
   cursor: pointer;
   color: #333;
   transition: all 0.2s ease;
-  z-index: 1001;
+  z-index: 10001;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .close-modal-btn:hover {
@@ -965,17 +991,26 @@ onUnmounted(() => {
 /* Responsivo para mobile */
 @media (max-width: 768px) {
   .image-modal {
-    padding: 10px;
+    padding: 20px 10px;
   }
 
   .close-modal-btn {
-    top: -45px;
-    width: 36px;
-    height: 36px;
+    top: 10px;
+    right: 10px;
+    width: 44px;
+    height: 44px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+  }
+
+  .close-modal-btn:hover {
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
   }
 
   .modal-image {
-    max-height: calc(100vh - 100px);
+    max-height: calc(100vh - 80px);
+    max-width: calc(100vw - 20px);
   }
 
   .modal-image-name {
