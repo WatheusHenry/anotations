@@ -86,6 +86,14 @@ const handleKeyPress = async (event: KeyboardEvent) => {
   }
 }
 
+const handleKeyDown = async (event: KeyboardEvent) => {
+  // Capturar Enter tanto no keypress quanto no keydown para melhor compatibilidade mobile
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault()
+    await addNote()
+  }
+}
+
 const deleteNote = async (id: string) => {
   await notesStore.removeNote(id)
 }
@@ -365,33 +373,35 @@ const fetchLinkPreview = async (url: string) => {
     </div>
     <!-- Input para Nova Anotação -->
     <footer class="app-footer">
-      <div class="input-container">
-        <input v-model="newNote" type="text" placeholder="Salvar uma nota..." class="note-input"
-          @keypress="handleKeyPress" />
-        <div class="action-buttons">
-          <button @click="triggerImageUpload" class="image-btn" aria-label="Adicionar imagem">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-              <circle cx="8.5" cy="8.5" r="1.5" />
-              <polyline points="21,15 16,10 5,21" />
-            </svg>
-          </button>
-          <button @click="addNote" :disabled="!newNote.trim() || isAddingNote" class="send-btn"
-            :class="{ 'loading': isAddingNote }" aria-label="Adicionar anotação">
-            <svg v-if="!isAddingNote" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2">
-              <line x1="22" y1="2" x2="11" y2="13" />
-              <polygon points="22,2 15,22 11,13 2,9 22,2" />
-            </svg>
-            <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-              class="loading-spinner">
-              <circle cx="12" cy="12" r="10" />
-              <path
-                d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-            </svg>
-          </button>
+      <form @submit.prevent="addNote" class="note-form">
+        <div class="input-container">
+          <input v-model="newNote" type="text" placeholder="Salvar uma nota..." class="note-input" enterkeyhint="send"
+            autocomplete="off" autocapitalize="sentences" @keypress="handleKeyPress" @keydown="handleKeyDown" />
+          <div class="action-buttons">
+            <button type="button" @click="triggerImageUpload" class="image-btn" aria-label="Adicionar imagem">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <polyline points="21,15 16,10 5,21" />
+              </svg>
+            </button>
+            <button type="submit" :disabled="!newNote.trim() || isAddingNote" class="send-btn"
+              :class="{ 'loading': isAddingNote }" aria-label="Adicionar anotação">
+              <svg v-if="!isAddingNote" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2">
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22,2 15,22 11,13 2,9 22,2" />
+              </svg>
+              <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                class="loading-spinner">
+                <circle cx="12" cy="12" r="10" />
+                <path
+                  d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+              </svg>
+            </button>
+          </div>
         </div>
-      </div>
+      </form>
 
       <!-- Input de arquivo oculto -->
       <input ref="fileInput" type="file" accept="image/*" @change="handleImageUpload" style="display: none" />
@@ -783,6 +793,10 @@ const fetchLinkPreview = async (url: string) => {
   box-shadow:
     0 3px 30px rgba(0, 0, 0, 0.2),
     0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.note-form {
+  width: 100%;
 }
 
 .input-container {
