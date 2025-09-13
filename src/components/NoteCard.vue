@@ -13,7 +13,8 @@
     </div>
   </div>
 
-  <div class="note-card-container" :class="{ 'swiping': isSwiping, 'deleting': isDeleting, 'image-card-container': note.type === 'image' }">
+  <div class="note-card-container"
+    :class="{ 'swiping': isSwiping, 'deleting': isDeleting, 'image-card-container': note.type === 'image' }">
     <!-- Fundo de exclusão - apenas para cards não-imagem -->
     <div v-if="note.type !== 'image'" class="delete-background">
       <div class="delete-icon" :class="{ 'active': swipeDistance <= deleteThreshold }">
@@ -27,8 +28,8 @@
 
     <!-- Indicador de exclusão flutuante para cards de imagem -->
     <div v-if="note.type === 'image' && isSwiping" class="floating-delete-indicator"
-         :class="{ 'ready-to-delete': swipeDistance <= deleteThreshold }"
-         :style="{ opacity: Math.min(Math.abs(swipeDistance) / 50, 1) }">
+      :class="{ 'ready-to-delete': swipeDistance <= deleteThreshold }"
+      :style="{ opacity: Math.min(Math.abs(swipeDistance) / 50, 1) }">
       <div class="delete-circle">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c0-1 1-2 2-2v2" />
@@ -59,9 +60,11 @@
           <div class="link-content">
             <div class="link-header">
               <img v-if="note.linkFavicon" :src="note.linkFavicon" :alt="'Favicon'" class="link-favicon" />
-              <div class="link-title">{{ note.linkTitle || note.linkUrl }}</div>
+              <div class="link-title" :style="{ fontSize: linkTitleFontSize }">{{ note.linkTitle || note.linkUrl }}
+              </div>
             </div>
-            <div v-if="note.linkDescription" class="link-description">{{ note.linkDescription }}</div>
+            <div v-if="note.linkDescription" class="link-description" :style="{ fontSize: linkDescriptionFontSize }">{{
+              note.linkDescription }}</div>
             <div class="link-url">{{ note.linkUrl }}</div>
           </div>
           <div class="link-icon">
@@ -73,7 +76,8 @@
         </div>
 
         <!-- Exibir texto se houver -->
-        <div v-if="note.content" class="note-text" :class="{ 'link-text': note.type === 'link' }">
+        <div v-if="note.content" class="note-text" :class="{ 'link-text': note.type === 'link' }"
+          :style="{ fontSize: dynamicFontSize, lineHeight: dynamicLineHeight }">
           {{ note.content }}
         </div>
       </div>
@@ -94,7 +98,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted } from 'vue'
+import { ref, onUnmounted, computed } from 'vue'
 import type { Note } from '@/stores/notes'
 
 interface Props {
@@ -107,6 +111,75 @@ interface Emits {
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
+
+// Calcular tamanho da fonte baseado no comprimento do texto
+const dynamicFontSize = computed(() => {
+  if (!props.note.content) return '16px'
+
+  const textLength = props.note.content.length
+  const noteType = props.note.type
+
+  // Ajustar breakpoints baseado no tipo de nota
+  let baseFontSize = 18
+  let minFontSize = 12
+
+  // Para links, usar fonte menor por padrão (já que há título e descrição)
+  if (noteType === 'link') {
+    baseFontSize = 14
+    minFontSize = 11
+  }
+
+  // Calcular tamanho da fonte de forma mais suave
+  if (textLength <= 30) {
+    return `${baseFontSize}px`
+  } else if (textLength <= 80) {
+    return `${baseFontSize - 1}px`
+  } else if (textLength <= 150) {
+    return `${baseFontSize - 2}px`
+  } else if (textLength <= 300) {
+    return `${baseFontSize - 3}px`
+  } else if (textLength <= 500) {
+    return `${baseFontSize - 4}px`
+  } else {
+    return `${minFontSize}px`
+  }
+})
+
+// Calcular altura da linha baseada no tamanho da fonte
+const dynamicLineHeight = computed(() => {
+  const fontSize = parseInt(dynamicFontSize.value)
+  return `${fontSize * 1.4}px` // Line height 1.4x o tamanho da fonte
+})
+
+// Tamanho da fonte para títulos de link (baseado no comprimento do título)
+const linkTitleFontSize = computed(() => {
+  if (!props.note.linkTitle) return '14px'
+
+  const titleLength = props.note.linkTitle.length
+
+  if (titleLength <= 30) {
+    return '14px' // Título curto
+  } else if (titleLength <= 60) {
+    return '13px' // Título médio
+  } else {
+    return '12px' // Título longo
+  }
+})
+
+// Tamanho da fonte para descrições de link
+const linkDescriptionFontSize = computed(() => {
+  if (!props.note.linkDescription) return '12px'
+
+  const descLength = props.note.linkDescription.length
+
+  if (descLength <= 100) {
+    return '12px' // Descrição curta
+  } else if (descLength <= 200) {
+    return '11px' // Descrição média
+  } else {
+    return '10px' // Descrição longa
+  }
+})
 
 
 
@@ -441,7 +514,6 @@ onUnmounted(() => {
 .note-card-container {
   position: relative;
   overflow: hidden;
-  margin-bottom: 12px;
   background: #dc3545;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -537,6 +609,7 @@ onUnmounted(() => {
   line-height: 1.5;
   word-wrap: break-word;
   white-space: pre-wrap;
+  font-family: 'Onest', sans-serif;
 }
 
 .note-image-container {
@@ -561,17 +634,22 @@ onUnmounted(() => {
   color: #6c757d;
   margin-top: 4px;
   font-style: italic;
+  font-family: 'Onest', sans-serif;
+  font-weight: 400;
 }
 
+
+
 .note-text {
-  margin-top: 8px;
+  transition: font-size 0.3s ease, line-height 0.3s ease;
+  font-family: 'Onest', sans-serif;
+  font-weight: 400;
 }
 
 .note-text.link-text {
   font-size: 12px;
   font-style: italic;
   color: #6c757d;
-
 }
 
 /* Preview de link */
@@ -635,6 +713,8 @@ onUnmounted(() => {
   white-space: nowrap;
   flex: 1;
   min-width: 0;
+  transition: font-size 0.3s ease;
+  font-family: 'Onest', sans-serif;
 }
 
 .link-description {
@@ -647,6 +727,7 @@ onUnmounted(() => {
   line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  transition: font-size 0.3s ease;
 }
 
 .link-url {
@@ -757,6 +838,7 @@ onUnmounted(() => {
   0% {
     transform: scale(1.1);
   }
+
   100% {
     transform: scale(1.2);
   }

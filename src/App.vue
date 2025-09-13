@@ -1,3 +1,4 @@
+<!-- eslint-disable @typescript-eslint/no-unsafe-function-type -->
 <!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <!-- eslint-disable @typescript-eslint/no-unused-vars -->
 <script setup lang="ts">
@@ -555,6 +556,8 @@ const handleSwipeEnd = () => {
   overflow-x: hidden;
   /* Melhorar performance de scroll */
   -webkit-overflow-scrolling: touch;
+  /* Aplicar fonte Onest */
+  font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
 }
 
 .app-header {
@@ -568,10 +571,11 @@ const handleSwipeEnd = () => {
 
 .app-title {
   font-size: 24px;
-  font-weight: 600;
+  font-weight: 700;
   color: #212529;
   margin: 0;
   text-align: center;
+  font-family: 'Onest', sans-serif;
 }
 
 .app-main {
@@ -623,6 +627,8 @@ const handleSwipeEnd = () => {
   -moz-user-select: text;
   -ms-user-select: text;
   user-select: text;
+  font-family: 'Onest', sans-serif;
+  font-weight: 400;
 }
 
 .search-input-wrapper:has(.clear-search-btn) .search-input {
@@ -760,7 +766,7 @@ const handleSwipeEnd = () => {
 .notes-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 /* Animações de Transição para Notas */
@@ -830,10 +836,11 @@ const handleSwipeEnd = () => {
 
 .empty-title {
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 700;
   color: #495057;
   margin: 0 0 12px 0;
   animation: titleSlideUp 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
+  font-family: 'Onest', sans-serif;
 }
 
 .empty-subtitle {
@@ -842,6 +849,8 @@ const handleSwipeEnd = () => {
   color: #6c757d;
   line-height: 1.5;
   animation: subtitleSlideUp 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s both;
+  font-family: 'Onest', sans-serif;
+  font-weight: 400;
 }
 
 /* Animações do estado vazio */
@@ -995,11 +1004,12 @@ const handleSwipeEnd = () => {
 
 .note-input {
   flex: 1;
-  padding: 14px 16px;
+  padding: 10px 10px;
   border: none;
   border-radius: 20px;
   font-size: 16px;
-  font-family: inherit;
+  font-family: 'Onest', sans-serif;
+  font-weight: 400;
   outline: none;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   height: 40px;
@@ -1181,7 +1191,7 @@ const handleSwipeEnd = () => {
   }
 
   .note-input {
-    padding: 12px 14px;
+    padding: 10px 6px;
     height: 36px;
   }
 
@@ -1310,6 +1320,8 @@ img {
   /* Melhorar performance */
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
+  /* Aplicar fonte Onest globalmente */
+  font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
 }
 
 /* Prevenir zoom duplo-clique em toda a aplicação */
@@ -1330,6 +1342,8 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  /* Aplicar fonte Onest */
+  font-family: 'Onest', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
 }
 
 #app {
