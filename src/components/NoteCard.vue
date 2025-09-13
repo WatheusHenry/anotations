@@ -217,9 +217,13 @@ const handleTouchStart = (event: TouchEvent) => {
 const handleTouchMove = (event: TouchEvent) => {
   if (!isDragging.value) return
 
-  event.preventDefault()
   const touch = event.touches[0]
   updateSwipe(touch.clientX, touch.clientY)
+
+  // Só prevenir o comportamento padrão se estivermos realmente fazendo swipe horizontal
+  if (isSwiping.value) {
+    event.preventDefault()
+  }
 }
 
 const handleTouchEnd = () => {
@@ -241,8 +245,12 @@ const handleMouseDown = (event: MouseEvent) => {
 const handleMouseMove = (event: MouseEvent) => {
   if (!isDragging.value) return
 
-  event.preventDefault()
   updateSwipe(event.clientX, event.clientY)
+
+  // Só prevenir o comportamento padrão se estivermos realmente fazendo swipe horizontal
+  if (isSwiping.value) {
+    event.preventDefault()
+  }
 }
 
 const handleMouseUp = () => {
@@ -267,9 +275,19 @@ const updateSwipe = (x: number, y: number) => {
   const deltaY = y - startY.value
 
   // Verificar se é um movimento horizontal (swipe) ou vertical (scroll)
-  if (!isSwiping.value && Math.abs(deltaX) > 6) {
-    if (Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
+  if (!isSwiping.value) {
+    const absX = Math.abs(deltaX)
+    const absY = Math.abs(deltaY)
+
+    // Só ativar swipe se o movimento horizontal for significativamente maior que o vertical
+    if (absX > 10 && absX > absY * 1.5) {
       isSwiping.value = true
+    }
+    // Se o movimento vertical for maior, não ativar swipe (permitir scroll)
+    else if (absY > absX) {
+      // Cancelar o dragging para permitir scroll normal
+      isDragging.value = false
+      return
     }
   }
 
