@@ -1,4 +1,18 @@
 <template>
+  <!-- Modal de imagem -->
+  <div v-if="showImageModal" class="image-modal" @click="closeImageModal" @touchstart="closeImageModal">
+    <div class="image-modal-content" @click.stop @touchstart.stop>
+      <button class="close-modal-btn" @click="closeImageModal" @touchstart="closeImageModal">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+      <img :src="note.imageData" :alt="note.imageName || 'Imagem da anotação'" class="modal-image" />
+      <div v-if="note.imageName" class="modal-image-name">{{ note.imageName }}</div>
+    </div>
+  </div>
+
   <div class="note-card-container" :class="{ 'swiping': isSwiping, 'deleting': isDeleting }">
     <!-- Fundo vermelho com ícone de lixeira -->
     <div class="delete-background">
@@ -30,7 +44,10 @@
             <img :src="note.linkImage" :alt="note.linkTitle || 'Preview do link'" />
           </div>
           <div class="link-content">
-            <div class="link-title">{{ note.linkTitle || note.linkUrl }}</div>
+            <div class="link-header">
+              <img v-if="note.linkFavicon" :src="note.linkFavicon" :alt="'Favicon'" class="link-favicon" />
+              <div class="link-title">{{ note.linkTitle || note.linkUrl }}</div>
+            </div>
             <div v-if="note.linkDescription" class="link-description">{{ note.linkDescription }}</div>
             <div class="link-url">{{ note.linkUrl }}</div>
           </div>
@@ -64,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted, onMounted } from 'vue'
+import { ref, onUnmounted } from 'vue'
 import type { Note } from '@/stores/notes'
 
 interface Props {
@@ -88,6 +105,7 @@ const isDragging = ref(false)
 const startX = ref(0)
 const startY = ref(0)
 const currentX = ref(0)
+const showImageModal = ref(false)
 const deleteThreshold = -50 // Distância mínima para excluir (pixels) - mais fácil
 const maxSwipeDistance = -100 // Distância máxima de arraste
 
@@ -168,25 +186,16 @@ const copyToClipboard = async () => {
 
 const openImageModal = () => {
   if (props.note.type === 'image' && props.note.imageData) {
-    // Abrir imagem em nova aba
-    const newWindow = window.open()
-    if (newWindow) {
-      newWindow.document.write(`
-        <html>
-          <head>
-            <title>${props.note.imageName || 'Imagem da anotação'}</title>
-            <style>
-              body { margin: 0; padding: 20px; background: #000; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-              img { max-width: 100%; max-height: 100%; object-fit: contain; }
-            </style>
-          </head>
-          <body>
-            <img src="${props.note.imageData}" alt="${props.note.imageName || 'Imagem da anotação'}" />
-          </body>
-        </html>
-      `)
-    }
+    showImageModal.value = true
+    // Prevenir scroll do body quando modal está aberto
+    document.body.style.overflow = 'hidden'
   }
+}
+
+const closeImageModal = () => {
+  showImageModal.value = false
+  // Restaurar scroll do body
+  document.body.style.overflow = ''
 }
 
 const openLink = () => {
@@ -388,6 +397,11 @@ onUnmounted(() => {
   isDragging.value = false
   isSwiping.value = false
   swipeDistance.value = 0
+
+  // Restaurar scroll do body se modal estiver aberto
+  if (showImageModal.value) {
+    document.body.style.overflow = ''
+  }
 })
 
 </script>
@@ -566,14 +580,30 @@ onUnmounted(() => {
   min-width: 0;
 }
 
+.link-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.link-favicon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border-radius: 2px;
+  object-fit: cover;
+}
+
 .link-title {
   font-weight: 600;
   font-size: 14px;
   color: #212529;
-  margin-bottom: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 
 .link-description {
@@ -583,6 +613,7 @@ onUnmounted(() => {
   margin-bottom: 6px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -670,6 +701,106 @@ onUnmounted(() => {
   100% {
     transform: scale(1.2);
     color: rgba(255, 255, 255, 0.9);
+  }
+}
+
+/* Modal de imagem */
+.image-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.image-modal-content {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.close-modal-btn {
+  position: absolute;
+  top: -50px;
+  right: 0;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #333;
+  transition: all 0.2s ease;
+  z-index: 1001;
+}
+
+.close-modal-btn:hover {
+  background: white;
+  transform: scale(1.1);
+}
+
+.modal-image {
+  max-width: 100%;
+  max-height: calc(100vh - 120px);
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.modal-image-name {
+  color: white;
+  font-size: 14px;
+  margin-top: 16px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 8px 16px;
+  border-radius: 20px;
+  backdrop-filter: blur(4px);
+}
+
+/* Responsivo para mobile */
+@media (max-width: 768px) {
+  .image-modal {
+    padding: 10px;
+  }
+
+  .close-modal-btn {
+    top: -45px;
+    width: 36px;
+    height: 36px;
+  }
+
+  .modal-image {
+    max-height: calc(100vh - 100px);
+  }
+
+  .modal-image-name {
+    font-size: 12px;
+    margin-top: 12px;
+    padding: 6px 12px;
   }
 }
 </style>
