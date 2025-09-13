@@ -12,6 +12,12 @@ const searchQuery = ref('')
 const isSearchExpanded = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 const isAddingNote = ref(false)
+const noteInputRef = ref<HTMLInputElement | null>(null)
+
+// Variáveis para swipe up
+const isSwipingUp = ref(false)
+const swipeStartY = ref(0)
+const swipeStartTime = ref(0)
 
 const addNote = async () => {
   if (newNote.value.trim() && !isAddingNote.value) {
@@ -283,6 +289,50 @@ const fetchLinkPreview = async (url: string) => {
 
   return fallbackData()
 }
+
+// Funções para swipe up no input
+const handleSwipeStart = (event: TouchEvent) => {
+  const touch = event.touches[0]
+  swipeStartY.value = touch.clientY
+  swipeStartTime.value = Date.now()
+  isSwipingUp.value = false
+}
+
+const handleSwipeMove = (event: TouchEvent) => {
+  if (!swipeStartY.value) return
+
+  const touch = event.touches[0]
+  const deltaY = swipeStartY.value - touch.clientY
+  const deltaTime = Date.now() - swipeStartTime.value
+
+  // Detectar swipe up: movimento para cima > 20px em menos de 400ms
+  if (deltaY > 20 && deltaTime < 400) {
+    isSwipingUp.value = true
+
+    // Feedback tátil se disponível
+    if ('vibrate' in navigator) {
+      navigator.vibrate(50)
+    }
+  }
+}
+
+const handleSwipeEnd = () => {
+  if (isSwipingUp.value && noteInputRef.value) {
+    // Focar no input e mostrar teclado
+    noteInputRef.value.focus()
+
+    // Scroll suave para o input (caso necessário)
+    noteInputRef.value.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center'
+    })
+  }
+
+  // Reset
+  swipeStartY.value = 0
+  swipeStartTime.value = 0
+  isSwipingUp.value = false
+}
 </script>
 
 <template>
@@ -350,10 +400,15 @@ const fetchLinkPreview = async (url: string) => {
       </div>
     </div>
     <!-- Input para Nova Anotação -->
-    <footer class="app-footer">
+    <footer class="app-footer" @touchstart="handleSwipeStart" @touchmove="handleSwipeMove" @touchend="handleSwipeEnd">
+      <!-- Área de swipe up -->
+      <div class="swipe-indicator" :class="{ 'active': isSwipingUp }">
+        <div class="swipe-handle"></div>
+      </div>
+
       <form @submit.prevent="addNote" class="note-form">
         <div class="input-container">
-          <input v-model="newNote" type="text" placeholder="Salvar uma nota..." class="note-input" enterkeyhint="send"
+          <input ref="noteInputRef" v-model="newNote" type="text" placeholder="Salvar uma nota..." class="note-input" enterkeyhint="send"
             autocomplete="off" autocapitalize="sentences" @keypress="handleKeyPress" @keydown="handleKeyDown" />
           <div class="action-buttons">
             <button type="button" @click="triggerImageUpload" class="image-btn" aria-label="Adicionar imagem">
@@ -766,11 +821,49 @@ const fetchLinkPreview = async (url: string) => {
   backdrop-filter: blur(10px);
   border-top: 1px solid rgba(233, 236, 239, 0.3);
   border-radius: 2.5rem 2.5rem 0 0;
-  padding: 20px 50px;
+  padding: 8px 50px 20px;
   z-index: 10;
   box-shadow:
     0 3px 30px rgba(0, 0, 0, 0.2),
     0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.swipe-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 0 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.swipe-handle {
+  width: 40px;
+  height: 4px;
+  background: #e9ecef;
+  border-radius: 2px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.swipe-indicator.active .swipe-handle {
+  background: #007bff;
+  width: 60px;
+  height: 5px;
+  animation: swipeUpPulse 0.3s ease-out;
+}
+
+@keyframes swipeUpPulse {
+  0% {
+    transform: scaleX(1);
+    background: #e9ecef;
+  }
+  50% {
+    transform: scaleX(1.2);
+    background: #007bff;
+  }
+  100% {
+    transform: scaleX(1);
+    background: #007bff;
+  }
 }
 
 .note-form {
@@ -964,8 +1057,21 @@ const fetchLinkPreview = async (url: string) => {
 
   .app-footer {
     height: 110px;
-    padding: 22px 12px 50px 12px;
+    padding: 8px 12px 50px 12px;
+  }
 
+  .swipe-indicator {
+    padding: 6px 0 8px;
+  }
+
+  .swipe-handle {
+    width: 35px;
+    height: 3px;
+  }
+
+  .swipe-indicator.active .swipe-handle {
+    width: 50px;
+    height: 4px;
   }
 
   .input-container {
