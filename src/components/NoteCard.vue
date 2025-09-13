@@ -13,11 +13,24 @@
     </div>
   </div>
 
-  <div class="note-card-container" :class="{ 'swiping': isSwiping, 'deleting': isDeleting }">
-    <!-- Fundo vermelho com ícone de lixeira -->
-    <div class="delete-background">
+  <div class="note-card-container" :class="{ 'swiping': isSwiping, 'deleting': isDeleting, 'image-card-container': note.type === 'image' }">
+    <!-- Fundo de exclusão - apenas para cards não-imagem -->
+    <div v-if="note.type !== 'image'" class="delete-background">
       <div class="delete-icon" :class="{ 'active': swipeDistance <= deleteThreshold }">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c0-1 1-2 2-2v2" />
+          <line x1="10" y1="11" x2="10" y2="17" />
+          <line x1="14" y1="11" x2="14" y2="17" />
+        </svg>
+      </div>
+    </div>
+
+    <!-- Indicador de exclusão flutuante para cards de imagem -->
+    <div v-if="note.type === 'image' && isSwiping" class="floating-delete-indicator"
+         :class="{ 'ready-to-delete': swipeDistance <= deleteThreshold }"
+         :style="{ opacity: Math.min(Math.abs(swipeDistance) / 50, 1) }">
+      <div class="delete-circle">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c0-1 1-2 2-2v2" />
           <line x1="10" y1="11" x2="10" y2="17" />
           <line x1="14" y1="11" x2="14" y2="17" />
@@ -655,7 +668,7 @@ onUnmounted(() => {
   color: #007bff;
 }
 
-/* Fundo de exclusão */
+/* Fundo de exclusão para cards normais */
 .delete-background {
   position: absolute;
   top: 0;
@@ -665,22 +678,24 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding-right: 30px;
-  background: #dc3545;
+  padding-right: 24px;
+  background: linear-gradient(90deg, rgba(220, 53, 69, 0.8) 0%, #dc3545 100%);
+  border-radius: 0;
 }
 
 .delete-icon {
-  color: rgba(255, 255, 255, 0.6);
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-  transform: scale(0.8);
-  opacity: 0.6;
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform: scale(0.9);
+  opacity: 0.7;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
 .delete-icon.active {
   color: white;
-  transform: scale(1.2);
+  transform: scale(1.15);
   opacity: 1;
-  animation: deleteIconPulse 0.4s ease-in-out;
+  animation: deleteIconPulse 0.5s ease-in-out;
 }
 
 .delete-icon svg {
@@ -689,20 +704,86 @@ onUnmounted(() => {
 
 @keyframes deleteIconPulse {
   0% {
-    transform: scale(1.2);
+    transform: scale(1.15);
   }
 
   50% {
-    transform: scale(1.4);
+    transform: scale(1.3);
   }
 
   100% {
-    transform: scale(1.2);
+    transform: scale(1.15);
   }
 }
 
 .note-card-container.deleting .delete-icon {
   animation: deleteIconSuccess 0.25s ease-out forwards;
+}
+
+/* Indicador flutuante de exclusão para cards de imagem */
+.floating-delete-indicator {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  transform: translateY(-50%);
+  z-index: 5;
+  pointer-events: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.delete-circle {
+  width: 44px;
+  height: 44px;
+  background: rgba(220, 53, 69, 0.95);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+  transform: scale(0.8);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.floating-delete-indicator.ready-to-delete .delete-circle {
+  background: #dc3545;
+  transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(220, 53, 69, 0.6);
+  animation: deleteReadyPulse 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes deleteReadyPulse {
+  0% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1.2);
+  }
+}
+
+/* Melhorias para mobile */
+@media (max-width: 768px) {
+  .delete-background {
+    padding-right: 20px;
+  }
+
+  .floating-delete-indicator {
+    right: 12px;
+  }
+
+  .delete-circle {
+    width: 40px;
+    height: 40px;
+  }
+
+  .delete-icon {
+    transform: scale(0.85);
+  }
+
+  .delete-icon.active {
+    transform: scale(1.1);
+  }
 }
 
 @keyframes deleteIconSuccess {
