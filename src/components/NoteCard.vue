@@ -1,66 +1,63 @@
 <template>
-  <div
-    class="note-card-container"
-    :class="{ 'swiping': isSwiping, 'deleting': isDeleting }"
-  >
+  <div class="note-card-container" :class="{ 'swiping': isSwiping, 'deleting': isDeleting }">
     <!-- Fundo vermelho com ícone de lixeira -->
     <div class="delete-background">
       <div class="delete-icon" :class="{ 'active': swipeDistance <= deleteThreshold }">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c0-1 1-2 2-2v2"/>
-          <line x1="10" y1="11" x2="10" y2="17"/>
-          <line x1="14" y1="11" x2="14" y2="17"/>
+          <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c0-1 1-2 2-2v2" />
+          <line x1="10" y1="11" x2="10" y2="17" />
+          <line x1="14" y1="11" x2="14" y2="17" />
         </svg>
       </div>
     </div>
 
     <!-- Card principal que desliza -->
-    <div
-      class="note-card"
-      :class="{ 'swiping': isSwiping, 'deleting': isDeleting }"
-      :style="{ transform: `translateX(${swipeDistance}px)` }"
-      @touchstart="handleTouchStart"
-      @touchmove="handleTouchMove"
-      @touchend="handleTouchEnd"
-      @touchcancel="handleTouchEnd"
-      @mousedown="handleMouseDown"
-      @mousemove="handleMouseMove"
-      @mouseup="handleMouseUp"
-      @mouseleave="handleMouseUp"
-    >
-    <div class="note-content">
-      <!-- Exibir imagem se for uma nota de imagem -->
-      <div v-if="note.type === 'image' && note.imageData" class="note-image-container">
-        <img
-          :src="note.imageData"
-          :alt="note.imageName || 'Imagem da anotação'"
-          class="note-image"
-          @click="openImageModal"
-        />
-        <div v-if="note.imageName" class="image-name">{{ note.imageName }}</div>
-      </div>
+    <div class="note-card" :class="{ 'swiping': isSwiping, 'deleting': isDeleting }"
+      :style="{ transform: `translateX(${swipeDistance}px)` }" @touchstart="handleTouchStart"
+      @touchmove="handleTouchMove" @touchend="handleTouchEnd" @touchcancel="handleTouchEnd" @mousedown="handleMouseDown"
+      @mousemove="handleMouseMove" @mouseup="handleMouseUp" @mouseleave="handleMouseUp">
+      <div class="note-content">
+        <!-- Exibir imagem se for uma nota de imagem -->
+        <div v-if="note.type === 'image' && note.imageData" class="note-image-container">
+          <img :src="note.imageData" :alt="note.imageName || 'Imagem da anotação'" class="note-image"
+            @click="openImageModal" />
+          <div v-if="note.imageName" class="image-name">{{ note.imageName }}</div>
+        </div>
 
-      <!-- Exibir texto se houver -->
-      <div v-if="note.content" class="note-text">
-        {{ note.content }}
+        <!-- Exibir preview de link se for uma nota de link -->
+        <div v-if="note.type === 'link' && note.linkUrl" class="link-preview" @click="openLink">
+          <div v-if="note.linkImage" class="link-image">
+            <img :src="note.linkImage" :alt="note.linkTitle || 'Preview do link'" />
+          </div>
+          <div class="link-content">
+            <div class="link-title">{{ note.linkTitle || note.linkUrl }}</div>
+            <div v-if="note.linkDescription" class="link-description">{{ note.linkDescription }}</div>
+            <div class="link-url">{{ note.linkUrl }}</div>
+          </div>
+          <div class="link-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
+          </div>
+        </div>
+
+        <!-- Exibir texto se houver -->
+        <div v-if="note.content" class="note-text" :class="{ 'link-text': note.type === 'link' }">
+          {{ note.content }}
+        </div>
       </div>
-    </div>
-    <button
-      class="copy-btn"
-      @click.stop="copyToClipboard"
-      @mousedown.stop
-      @touchstart.stop
-      :aria-label="copied ? 'Copiado!' : 'Copiar anotação'"
-      :class="{ 'copied': copied }"
-    >
-      <svg v-if="!copied" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-      </svg>
-      <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="20,6 9,17 4,12"/>
-      </svg>
-    </button>
+      <button class="copy-btn" @click.stop="copyToClipboard" @mousedown.stop @touchstart.stop
+        :aria-label="copied ? 'Copiado!' : 'Copiar anotação'" :class="{ 'copied': copied }">
+        <svg v-if="!copied" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </svg>
+        <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20,6 9,17 4,12" />
+        </svg>
+      </button>
 
     </div>
   </div>
@@ -80,6 +77,8 @@ interface Emits {
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
+
+
 
 const copied = ref(false)
 const isSwiping = ref(false)
@@ -104,6 +103,17 @@ const copyToClipboard = async () => {
       }
     }
 
+    // Se for um link, copiar a URL e título
+    if (props.note.type === 'link') {
+      textToCopy = props.note.linkUrl || ''
+      if (props.note.linkTitle) {
+        textToCopy = `${props.note.linkTitle} - ${textToCopy}`
+      }
+      if (props.note.content) {
+        textToCopy += ` - ${props.note.content}`
+      }
+    }
+
     await navigator.clipboard.writeText(textToCopy)
     copied.value = true
 
@@ -120,6 +130,16 @@ const copyToClipboard = async () => {
 
       if (props.note.type === 'image') {
         textToCopy = props.note.imageName || 'Imagem da anotação'
+        if (props.note.content) {
+          textToCopy += ` - ${props.note.content}`
+        }
+      }
+
+      if (props.note.type === 'link') {
+        textToCopy = props.note.linkUrl || ''
+        if (props.note.linkTitle) {
+          textToCopy = `${props.note.linkTitle} - ${textToCopy}`
+        }
         if (props.note.content) {
           textToCopy += ` - ${props.note.content}`
         }
@@ -166,6 +186,12 @@ const openImageModal = () => {
         </html>
       `)
     }
+  }
+}
+
+const openLink = () => {
+  if (props.note.type === 'link' && props.note.linkUrl) {
+    window.open(props.note.linkUrl, '_blank', 'noopener,noreferrer')
   }
 }
 
@@ -384,6 +410,7 @@ onUnmounted(() => {
     opacity: 1;
     transform: scale(1);
   }
+
   100% {
     opacity: 0.3;
     transform: scale(0.98);
@@ -416,7 +443,8 @@ onUnmounted(() => {
 }
 
 .note-card.deleting {
-  transition: none; /* Sem transição CSS, usamos JavaScript para controle total */
+  transition: none;
+  /* Sem transição CSS, usamos JavaScript para controle total */
 }
 
 
@@ -494,6 +522,90 @@ onUnmounted(() => {
   margin-top: 8px;
 }
 
+.note-text.link-text {
+  font-size: 12px;
+  font-style: italic;
+  color: #6c757d;
+
+}
+
+/* Preview de link */
+.link-preview {
+  display: flex;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 8px;
+  background: #f8f9fa;
+}
+
+.link-preview:hover {
+  border-color: #007bff;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.link-image {
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+  overflow: hidden;
+}
+
+.link-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.link-content {
+  flex: 1;
+  padding: 12px;
+  min-width: 0;
+}
+
+.link-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #212529;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link-description {
+  font-size: 12px;
+  color: #6c757d;
+  line-height: 1.4;
+  margin-bottom: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.link-url {
+  font-size: 11px;
+  color: #007bff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link-icon {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  color: #6c757d;
+}
+
+.link-preview:hover .link-icon {
+  color: #007bff;
+}
+
 /* Fundo de exclusão */
 .delete-background {
   position: absolute;
@@ -530,9 +642,11 @@ onUnmounted(() => {
   0% {
     transform: scale(1.2);
   }
+
   50% {
     transform: scale(1.4);
   }
+
   100% {
     transform: scale(1.2);
   }
@@ -547,10 +661,12 @@ onUnmounted(() => {
     transform: scale(1.2);
     color: white;
   }
+
   50% {
     transform: scale(1.5);
     color: #fff;
   }
+
   100% {
     transform: scale(1.2);
     color: rgba(255, 255, 255, 0.9);

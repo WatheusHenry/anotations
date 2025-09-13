@@ -11,19 +11,70 @@ const newNote = ref('')
 const searchQuery = ref('')
 const isSearchExpanded = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
+const isAddingNote = ref(false)
 
 const addNote = async () => {
-  if (newNote.value.trim()) {
-    await notesStore.addNote(newNote.value)
+  if (newNote.value.trim() && !isAddingNote.value) {
+    isAddingNote.value = true
+    const content = newNote.value.trim()
+
+    // Limpar o input imediatamente para evitar múltiplas submissões
     newNote.value = ''
 
-    // Animação de feedback no input
-    const inputContainer = document.querySelector('.input-container')
-    if (inputContainer) {
-      inputContainer.classList.add('note-added')
-      setTimeout(() => {
-        inputContainer.classList.remove('note-added')
-      }, 300)
+    try {
+      // Detectar se é um link
+      const urlRegex = /(https?:\/\/[^\s]+)/g
+      const urls = content.match(urlRegex)
+
+      if (urls && urls.length > 0) {
+        // Se contém links, salvar imediatamente como link básico
+        const url = urls[0] // Usar o primeiro link encontrado
+
+        try {
+          // Salvar imediatamente com dados básicos
+          const noteId = await notesStore.addLinkNote(
+            url,
+            new URL(url).hostname,
+            '',
+            '',
+            content
+          )
+
+          // Buscar preview em background e atualizar
+          fetchLinkPreview(url).then(linkData => {
+            notesStore.updateLinkNote(noteId, {
+              title: linkData.title,
+              description: linkData.description,
+              image: linkData.image
+            })
+          }).catch(() => {
+            // Preview falhou, manter dados básicos
+          })
+
+        } catch (error) {
+          console.error('Erro ao salvar link:', error)
+          // Se falhar, salvar como texto normal
+          await notesStore.addNote(content)
+        }
+      } else {
+        // Adicionar como nota normal
+        await notesStore.addNote(content)
+      }
+
+      // Animação de feedback no input
+      const inputContainer = document.querySelector('.input-container')
+      if (inputContainer) {
+        inputContainer.classList.add('note-added')
+        setTimeout(() => {
+          inputContainer.classList.remove('note-added')
+        }, 300)
+      }
+    } catch (error) {
+      console.error('Erro ao salvar nota:', error)
+      // Se falhar, adicionar como nota normal
+      await notesStore.addNote(content)
+    } finally {
+      isAddingNote.value = false
     }
   }
 }
@@ -61,6 +112,8 @@ const clearSearch = () => {
   searchQuery.value = ''
   isSearchExpanded.value = false
 }
+
+
 
 const filteredGroupedNotes = computed(() => {
   if (!searchQuery.value.trim()) {
@@ -148,6 +201,102 @@ const convertFileToBase64 = (file: File): Promise<string> => {
     reader.readAsDataURL(file)
   })
 }
+
+const fetchLinkPreview = async (url: string) => {
+  console.log('Buscando preview para:', url)
+
+  // Fallback básico que sempre retorna dados válidos
+  const fallbackData = () => {
+    try {
+      return {
+        title: new URL(url).hostname,
+        description: '',
+        image: ''
+      }
+    } catch {
+      return {
+        title: url,
+        description: '',
+        image: ''
+      }
+    }
+  }
+
+  try {
+    // Validar URL primeiro
+    new URL(url) // Isso vai lançar erro se URL for inválida
+
+    // Usar um serviço de proxy para evitar problemas de CORS
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
+
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 3000) // Reduzido para 3s
+
+    const response = await fetch(proxyUrl, {
+      signal: controller.signal,
+      headers: {
+        'Accept': 'application/json',
+      }
+    })
+
+    clearTimeout(timeoutId)
+
+    if (!response.ok) {
+      console.warn(`HTTP ${response.status} para ${url}`)
+      return fallbackData()
+    }
+
+    const data = await response.json()
+
+    if (data.contents) {
+      const parser = new DOMParser()
+      const doc = parser.parseFromString(data.contents, 'text/html')
+
+      // Extrair metadados Open Graph ou fallback para tags HTML básicas
+      const title =
+        doc.querySelector('meta[property="og:title"]')?.getAttribute('content')?.trim() ||
+        doc.querySelector('meta[name="twitter:title"]')?.getAttribute('content')?.trim() ||
+        doc.querySelector('title')?.textContent?.trim() ||
+        new URL(url).hostname
+
+      const description =
+        doc.querySelector('meta[property="og:description"]')?.getAttribute('content')?.trim() ||
+        doc.querySelector('meta[name="twitter:description"]')?.getAttribute('content')?.trim() ||
+        doc.querySelector('meta[name="description"]')?.getAttribute('content')?.trim() ||
+        ''
+
+      let image =
+        doc.querySelector('meta[property="og:image"]')?.getAttribute('content') ||
+        doc.querySelector('meta[name="twitter:image"]')?.getAttribute('content') ||
+        ''
+
+      // Garantir que a imagem seja uma URL absoluta
+      if (image && !image.startsWith('http')) {
+        try {
+          image = new URL(image, url).href
+        } catch {
+          image = ''
+        }
+      }
+
+      const result = {
+        title: title || new URL(url).hostname,
+        description: description || '',
+        image: image || ''
+      }
+
+      console.log('Preview encontrado:', result)
+      return result
+    }
+  } catch (error) {
+    console.error('Erro ao buscar preview:', error)
+  }
+
+  // Sempre retornar dados válidos
+  const result = fallbackData()
+  console.log('Usando fallback:', result)
+  return result
+}
 </script>
 
 <template>
@@ -217,8 +366,8 @@ const convertFileToBase64 = (file: File): Promise<string> => {
     <!-- Input para Nova Anotação -->
     <footer class="app-footer">
       <div class="input-container">
-        <textarea v-model="newNote" placeholder="Salvar uma nota..." class="note-input" rows="1"
-          @keypress="handleKeyPress"></textarea>
+        <input v-model="newNote" type="text" placeholder="Salvar uma nota..." class="note-input"
+          @keypress="handleKeyPress" />
         <div class="action-buttons">
           <button @click="triggerImageUpload" class="image-btn" aria-label="Adicionar imagem">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -227,10 +376,18 @@ const convertFileToBase64 = (file: File): Promise<string> => {
               <polyline points="21,15 16,10 5,21" />
             </svg>
           </button>
-          <button @click="addNote" :disabled="!newNote.trim()" class="send-btn" aria-label="Adicionar anotação">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <button @click="addNote" :disabled="!newNote.trim() || isAddingNote" class="send-btn"
+            :class="{ 'loading': isAddingNote }" aria-label="Adicionar anotação">
+            <svg v-if="!isAddingNote" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2">
               <line x1="22" y1="2" x2="11" y2="13" />
               <polygon points="22,2 15,22 11,13 2,9 22,2" />
+            </svg>
+            <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              class="loading-spinner">
+              <circle cx="12" cy="12" r="10" />
+              <path
+                d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
             </svg>
           </button>
         </div>
@@ -647,8 +804,6 @@ const convertFileToBase64 = (file: File): Promise<string> => {
 .action-buttons {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-left: 8px;
 }
 
 .note-input {
@@ -658,14 +813,15 @@ const convertFileToBase64 = (file: File): Promise<string> => {
   border-radius: 20px;
   font-size: 16px;
   font-family: inherit;
-  resize: none;
   outline: none;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  min-height: 40px;
-  max-height: 120px;
+  height: 40px;
   background: transparent !important;
   color: #212529;
-  /* Permitir seleção no textarea de nova nota */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* Permitir seleção no input de nova nota */
   -webkit-user-select: text;
   -moz-user-select: text;
   -ms-user-select: text;
@@ -755,6 +911,25 @@ const convertFileToBase64 = (file: File): Promise<string> => {
   transform: none;
 }
 
+.send-btn.loading {
+  color: #007bff;
+  opacity: 1;
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .image-btn {
   background: transparent;
   border: none;
@@ -807,7 +982,7 @@ const convertFileToBase64 = (file: File): Promise<string> => {
 
   .note-input {
     padding: 12px 14px;
-    min-height: 36px;
+    height: 36px;
   }
 
   .send-btn {

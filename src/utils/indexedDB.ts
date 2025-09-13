@@ -2,9 +2,13 @@ export interface Note {
   id: string
   content: string
   createdAt: Date
-  type: 'text' | 'image'
+  type: 'text' | 'image' | 'link'
   imageData?: string // Base64 da imagem
   imageName?: string // Nome original do arquivo
+  linkUrl?: string // URL do link
+  linkTitle?: string // Título da página
+  linkDescription?: string // Descrição da página
+  linkImage?: string // Imagem de preview do link
 }
 
 class NotesDB {
@@ -29,11 +33,11 @@ class NotesDB {
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result
-        
+
         // Criar object store se não existir
         if (!db.objectStoreNames.contains(this.storeName)) {
           const store = db.createObjectStore(this.storeName, { keyPath: 'id' })
-          
+
           // Criar índices
           store.createIndex('createdAt', 'createdAt', { unique: false })
           store.createIndex('content', 'content', { unique: false })
@@ -157,14 +161,14 @@ class NotesDB {
       const localStorageNotes = localStorage.getItem('notes')
       if (localStorageNotes) {
         const notes = JSON.parse(localStorageNotes)
-        
+
         for (const note of notes) {
           await this.addNote({
             ...note,
             createdAt: new Date(note.createdAt)
           })
         }
-        
+
         // Remover do localStorage após migração bem-sucedida
         localStorage.removeItem('notes')
         console.log('Migração do localStorage concluída com sucesso')

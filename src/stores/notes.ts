@@ -133,6 +133,60 @@ export const useNotesStore = defineStore('notes', () => {
     }
   }
 
+  const addLinkNote = async (url: string, title?: string, description?: string, image?: string, content: string = '') => {
+    const newNote: Note = {
+      id: Date.now().toString(),
+      content: content.trim(),
+      createdAt: new Date(),
+      type: 'link',
+      linkUrl: url,
+      linkTitle: title,
+      linkDescription: description,
+      linkImage: image
+    }
+
+    try {
+      await notesDB.addNote(newNote)
+      notes.value.push(newNote)
+    } catch (error) {
+      console.error('Erro ao adicionar nota com link no IndexedDB:', error)
+      // Fallback para localStorage
+      notes.value.push(newNote)
+      try {
+        localStorage.setItem('notes', JSON.stringify(notes.value))
+      } catch (fallbackError) {
+        console.error('Erro no fallback do localStorage:', fallbackError)
+      }
+    }
+
+    return newNote.id
+  }
+
+  const updateLinkNote = async (noteId: string, linkData: { title?: string, description?: string, image?: string }) => {
+    const noteIndex = notes.value.findIndex(note => note.id === noteId)
+    if (noteIndex === -1) return
+
+    const note = notes.value[noteIndex]
+    if (note.type !== 'link') return
+
+    // Atualizar dados do link
+    if (linkData.title) note.linkTitle = linkData.title
+    if (linkData.description) note.linkDescription = linkData.description
+    if (linkData.image) note.linkImage = linkData.image
+
+    try {
+      await notesDB.updateNote(note)
+    } catch (error) {
+      console.error('Erro ao atualizar nota no IndexedDB:', error)
+      // Fallback para localStorage
+      try {
+        localStorage.setItem('notes', JSON.stringify(notes.value))
+      } catch (fallbackError) {
+        console.error('Erro no fallback do localStorage:', fallbackError)
+      }
+    }
+  }
+
   const removeNote = async (id: string) => {
     const index = notes.value.findIndex(note => note.id === id)
     if (index > -1) {
@@ -182,6 +236,8 @@ export const useNotesStore = defineStore('notes', () => {
     groupedNotesByDate,
     addNote,
     addImageNote,
+    addLinkNote,
+    updateLinkNote,
     removeNote,
     formatDate,
     formatDateKey,
