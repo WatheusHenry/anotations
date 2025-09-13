@@ -1,15 +1,33 @@
 <template>
   <div
-    class="note-card"
-    :class="{ 'long-pressing': isLongPressing }"
-    @touchstart="handleTouchStart"
-    @touchend="handleTouchEnd"
-    @touchcancel="handleTouchEnd"
-    @mousedown="handleMouseDown"
-    @mouseup="handleMouseUp"
-    @mouseleave="handleMouseUp"
-    @contextmenu.prevent="handleContextMenu"
+    class="note-card-container"
+    :class="{ 'swiping': isSwiping, 'deleting': isDeleting }"
   >
+    <!-- Fundo vermelho com ícone de lixeira -->
+    <div class="delete-background">
+      <div class="delete-icon" :class="{ 'active': swipeDistance <= deleteThreshold }">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c0-1 1-2 2-2v2"/>
+          <line x1="10" y1="11" x2="10" y2="17"/>
+          <line x1="14" y1="11" x2="14" y2="17"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Card principal que desliza -->
+    <div
+      class="note-card"
+      :class="{ 'swiping': isSwiping, 'deleting': isDeleting }"
+      :style="{ transform: `translateX(${swipeDistance}px)` }"
+      @touchstart="handleTouchStart"
+      @touchmove="handleTouchMove"
+      @touchend="handleTouchEnd"
+      @touchcancel="handleTouchEnd"
+      @mousedown="handleMouseDown"
+      @mousemove="handleMouseMove"
+      @mouseup="handleMouseUp"
+      @mouseleave="handleMouseUp"
+    >
     <div class="note-content">
       <!-- Exibir imagem se for uma nota de imagem -->
       <div v-if="note.type === 'image' && note.imageData" class="note-image-container">
@@ -44,20 +62,7 @@
       </svg>
     </button>
 
-    <!-- Menu de Contexto -->
-    <div v-if="showMenu" class="context-menu" :style="menuPosition">
-      <button class="menu-item delete-item" @click="deleteNote">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c0-1 1-2 2-2v2"/>
-          <line x1="10" y1="11" x2="10" y2="17"/>
-          <line x1="14" y1="11" x2="14" y2="17"/>
-        </svg>
-        Excluir
-      </button>
     </div>
-
-    <!-- Overlay para fechar menu -->
-    <div v-if="showMenu" class="menu-overlay" @click="hideContextMenu"></div>
   </div>
 </template>
 
@@ -77,11 +82,15 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const copied = ref(false)
-const showMenu = ref(false)
-const menuPosition = ref({ top: '0px', left: '0px' })
-const longPressTimer = ref<number | null>(null)
-const longPressDuration = 400 // 400ms para ativar (mais rápido)
-const isLongPressing = ref(false)
+const isSwiping = ref(false)
+const isDeleting = ref(false)
+const swipeDistance = ref(0)
+const isDragging = ref(false)
+const startX = ref(0)
+const startY = ref(0)
+const currentX = ref(0)
+const deleteThreshold = -50 // Distância mínima para excluir (pixels) - mais fácil
+const maxSwipeDistance = -100 // Distância máxima de arraste
 
 const copyToClipboard = async () => {
   try {
@@ -160,161 +169,232 @@ const openImageModal = () => {
   }
 }
 
-// Funções para Long Press (Touch)
+// Funções para Swipe (Touch)
 const handleTouchStart = (event: TouchEvent) => {
   if (event.target && (event.target as Element).closest('.copy-btn')) {
-    return // Não ativar long press no botão de copiar
+    return // Não ativar swipe no botão de copiar
   }
 
   const touch = event.touches[0]
-  startLongPress(touch.clientX, touch.clientY)
+  startSwipe(touch.clientX, touch.clientY)
+}
+
+const handleTouchMove = (event: TouchEvent) => {
+  if (!isDragging.value) return
+
+  event.preventDefault()
+  const touch = event.touches[0]
+  updateSwipe(touch.clientX, touch.clientY)
 }
 
 const handleTouchEnd = () => {
-  cancelLongPress()
+  endSwipe()
 }
 
-// Funções para Long Press (Mouse)
+// Funções para Swipe (Mouse)
 const handleMouseDown = (event: MouseEvent) => {
   if (event.target && (event.target as Element).closest('.copy-btn')) {
-    return // Não ativar long press no botão de copiar
+    return // Não ativar swipe no botão de copiar
   }
 
-  // Só ativar long press no botão esquerdo
+  // Só ativar swipe no botão esquerdo
   if (event.button === 0) {
-    startLongPress(event.clientX, event.clientY)
+    startSwipe(event.clientX, event.clientY)
   }
+}
+
+const handleMouseMove = (event: MouseEvent) => {
+  if (!isDragging.value) return
+
+  event.preventDefault()
+  updateSwipe(event.clientX, event.clientY)
 }
 
 const handleMouseUp = () => {
-  cancelLongPress()
+  endSwipe()
 }
 
-// Função para context menu (botão direito)
-const handleContextMenu = (event: MouseEvent) => {
-  event.preventDefault()
-  if (event.target && (event.target as Element).closest('.copy-btn')) {
-    return // Não mostrar menu no botão de copiar
-  }
-  showContextMenu(event.clientX, event.clientY)
+// Iniciar Swipe
+const startSwipe = (x: number, y: number) => {
+  isDragging.value = true
+  startX.value = x
+  startY.value = y
+  currentX.value = x
+  isSwiping.value = false
+  swipeDistance.value = 0
 }
 
-// Iniciar Long Press
-const startLongPress = (x: number, y: number) => {
-  // Cancelar qualquer timer anterior
-  cancelLongPress()
+// Atualizar Swipe
+const updateSwipe = (x: number, y: number) => {
+  if (!isDragging.value) return
 
-  isLongPressing.value = true
+  const deltaX = x - startX.value
+  const deltaY = y - startY.value
 
-  longPressTimer.value = window.setTimeout(() => {
-    if (isLongPressing.value) {
-      showContextMenu(x, y)
+  // Verificar se é um movimento horizontal (swipe) ou vertical (scroll)
+  if (!isSwiping.value && Math.abs(deltaX) > 6) {
+    if (Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
+      isSwiping.value = true
     }
-  }, longPressDuration)
-}
+  }
 
-// Cancelar Long Press
-const cancelLongPress = () => {
-  isLongPressing.value = false
-
-  if (longPressTimer.value) {
-    clearTimeout(longPressTimer.value)
-    longPressTimer.value = null
+  if (isSwiping.value) {
+    // Só permitir movimento para a esquerda com limite máximo
+    if (deltaX < 0) {
+      // Limitar o arraste ao máximo definido
+      swipeDistance.value = Math.max(deltaX, maxSwipeDistance)
+    } else {
+      // Resistência forte ao arrastar para direita
+      swipeDistance.value = Math.min(deltaX * 0.15, 10)
+    }
   }
 }
 
-// Mostrar menu de contexto
-const showContextMenu = (x?: number, y?: number) => {
-  // Esconder menu anterior primeiro
-  hideContextMenu()
+// Finalizar Swipe
+const endSwipe = () => {
+  if (!isDragging.value) return
 
-  if (x !== undefined && y !== undefined) {
-    // Usar setTimeout para garantir que a posição seja calculada corretamente
-    setTimeout(() => {
-      const menuWidth = 140
-      const menuHeight = 60
-      const viewportWidth = window.innerWidth
-      const viewportHeight = window.innerHeight
-      const padding = 16
+  isDragging.value = false
 
-      // Calcular posição ajustada para não sair da tela
-      let adjustedX = x
-      let adjustedY = y
-
-      // Ajustar X (horizontal)
-      if (x + menuWidth + padding > viewportWidth) {
-        adjustedX = x - menuWidth - padding
-      }
-      if (adjustedX < padding) {
-        adjustedX = padding
-      }
-
-      // Ajustar Y (vertical)
-      if (y + menuHeight + padding > viewportHeight) {
-        adjustedY = y - menuHeight - padding
-      }
-      if (adjustedY < padding) {
-        adjustedY = padding
-      }
-
-      menuPosition.value = {
-        top: `${adjustedY}px`,
-        left: `${adjustedX}px`
-      }
-
-      showMenu.value = true
-    }, 10)
-  } else {
-    showMenu.value = true
+  if (isSwiping.value) {
+    // Se passou do threshold, excluir
+    if (swipeDistance.value <= deleteThreshold) {
+      deleteNote()
+    } else {
+      // Voltar à posição original
+      resetSwipe()
+    }
   }
+
+  isSwiping.value = false
 }
 
-// Esconder menu de contexto
-const hideContextMenu = () => {
-  showMenu.value = false
+// Resetar posição do swipe
+const resetSwipe = () => {
+  // Animação suave de retorno
+  const startDistance = swipeDistance.value
+  const duration = 300
+  const startTime = Date.now()
+
+  const animate = () => {
+    const elapsed = Date.now() - startTime
+    const progress = Math.min(elapsed / duration, 1)
+
+    // Easing function para animação suave
+    const easeOut = 1 - Math.pow(1 - progress, 3)
+
+    swipeDistance.value = startDistance * (1 - easeOut)
+
+    if (progress < 1) {
+      requestAnimationFrame(animate)
+    } else {
+      swipeDistance.value = 0
+      isSwiping.value = false
+    }
+  }
+
+  requestAnimationFrame(animate)
 }
 
-// Excluir nota
+// Excluir nota com animação melhorada
 const deleteNote = () => {
-  // Confirmação antes de excluir
-  const confirmDelete = confirm('Tem certeza que deseja excluir esta anotação?')
-  if (confirmDelete) {
-    emit('delete', props.note.id)
-  }
-  hideContextMenu()
-}
+  isDeleting.value = true
 
-// Listener global para fechar menu
-const handleGlobalClick = (event: Event) => {
-  if (showMenu.value && event.target) {
-    const target = event.target as Element
-    if (!target.closest('.context-menu')) {
-      hideContextMenu()
+  // Primeira fase: acelerar o swipe
+  const startDistance = swipeDistance.value
+  const intermediateDistance = -window.innerWidth * 0.4
+  const finalDistance = -window.innerWidth
+
+  // Fase 1: Swipe acelerado (100ms)
+  const phase1Duration = 100
+  const phase1StartTime = Date.now()
+
+  const animatePhase1 = () => {
+    const elapsed = Date.now() - phase1StartTime
+    const progress = Math.min(elapsed / phase1Duration, 1)
+
+    // Easing acelerado
+    const easeIn = progress * progress * progress
+
+    swipeDistance.value = startDistance + (intermediateDistance - startDistance) * easeIn
+
+    if (progress < 1) {
+      requestAnimationFrame(animatePhase1)
+    } else {
+      // Iniciar fase 2
+      animatePhase2()
     }
   }
+
+  // Fase 2: Saída final com fade (150ms)
+  const animatePhase2 = () => {
+    const phase2Duration = 150
+    const phase2StartTime = Date.now()
+
+    const animate = () => {
+      const elapsed = Date.now() - phase2StartTime
+      const progress = Math.min(elapsed / phase2Duration, 1)
+
+      // Easing suave para saída
+      const easeOut = 1 - Math.pow(1 - progress, 2)
+
+      swipeDistance.value = intermediateDistance + (finalDistance - intermediateDistance) * easeOut
+
+      if (progress < 1) {
+        requestAnimationFrame(animate)
+      } else {
+        // Pequeno delay para suavizar a transição
+        setTimeout(() => {
+          emit('delete', props.note.id)
+        }, 20)
+      }
+    }
+
+    requestAnimationFrame(animate)
+  }
+
+  requestAnimationFrame(animatePhase1)
 }
 
 // Lifecycle hooks
-onMounted(() => {
-  document.addEventListener('click', handleGlobalClick)
-})
-
 onUnmounted(() => {
-  document.removeEventListener('click', handleGlobalClick)
-  cancelLongPress()
-  hideContextMenu()
+  // Limpar qualquer estado de swipe ativo
+  isDragging.value = false
+  isSwiping.value = false
+  swipeDistance.value = 0
 })
 
 </script>
 
 <style scoped>
+.note-card-container {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 12px;
+  background: #dc3545;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.note-card-container.deleting {
+  animation: containerFadeOut 0.25s ease-out forwards;
+}
+
+@keyframes containerFadeOut {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0.3;
+    transform: scale(0.98);
+  }
+}
+
 .note-card {
   background: #eeeeee;
-  /* border-radius: 12px; */
   padding: 16px;
-  /* border: 1px solid #e9ecef; */
-  transition: all 0.2s ease;
   position: relative;
+  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
   /* Desabilitar seleção de texto no card */
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -322,17 +402,21 @@ onUnmounted(() => {
   user-select: none;
   /* Desabilitar highlight de toque no mobile */
   -webkit-tap-highlight-color: transparent;
+  width: 100%;
+  min-height: 100%;
 }
 
-.note-card:hover {
+.note-card:hover:not(.swiping) {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.note-card.long-pressing {
-  transform: scale(0.98);
-  background: #e0e0e0;
-  transition: all 0.1s ease;
+.note-card.swiping {
+  transition: none;
+}
+
+.note-card.deleting {
+  transition: none; /* Sem transição CSS, usamos JavaScript para controle total */
 }
 
 
@@ -410,69 +494,66 @@ onUnmounted(() => {
   margin-top: 8px;
 }
 
-/* Menu de Contexto */
-.context-menu {
-  position: fixed;
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-  padding: 4px;
-  z-index: 9999;
-  min-width: 120px;
-  animation: menuFadeIn 0.2s ease-out;
-}
-
-@keyframes menuFadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.menu-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 12px 16px;
-  border: none;
-  background: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  color: #212529;
-  transition: all 0.2s ease;
-  text-align: left;
-}
-
-.menu-item:hover {
-  background: rgba(0, 0, 0, 0.08);
-  transform: translateX(2px);
-}
-
-.delete-item {
-  color: #dc3545;
-}
-
-.delete-item:hover {
-  background: rgba(220, 53, 69, 0.15);
-  color: #dc3545;
-  transform: translateX(2px);
-}
-
-.menu-overlay {
-  position: fixed;
+/* Fundo de exclusão */
+.delete-background {
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 9998;
-  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 30px;
+  background: #dc3545;
+}
+
+.delete-icon {
+  color: rgba(255, 255, 255, 0.6);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform: scale(0.8);
+  opacity: 0.6;
+}
+
+.delete-icon.active {
+  color: white;
+  transform: scale(1.2);
+  opacity: 1;
+  animation: deleteIconPulse 0.4s ease-in-out;
+}
+
+.delete-icon svg {
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.3));
+}
+
+@keyframes deleteIconPulse {
+  0% {
+    transform: scale(1.2);
+  }
+  50% {
+    transform: scale(1.4);
+  }
+  100% {
+    transform: scale(1.2);
+  }
+}
+
+.note-card-container.deleting .delete-icon {
+  animation: deleteIconSuccess 0.25s ease-out forwards;
+}
+
+@keyframes deleteIconSuccess {
+  0% {
+    transform: scale(1.2);
+    color: white;
+  }
+  50% {
+    transform: scale(1.5);
+    color: #fff;
+  }
+  100% {
+    transform: scale(1.2);
+    color: rgba(255, 255, 255, 0.9);
+  }
 }
 </style>

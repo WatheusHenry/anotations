@@ -57,6 +57,11 @@ const handleSearchBlur = () => {
   }, 150)
 }
 
+const clearSearch = () => {
+  searchQuery.value = ''
+  isSearchExpanded.value = false
+}
+
 const filteredGroupedNotes = computed(() => {
   if (!searchQuery.value.trim()) {
     return notesStore.groupedNotesByDate
@@ -152,16 +157,37 @@ const convertFileToBase64 = (file: File): Promise<string> => {
 
       <!-- Lista de Anotações -->
       <div class="notes-container">
-        <div v-if="totalFilteredNotes === 0 && searchQuery" class="empty-state">
-          <p>Nenhuma anotação encontrada</p>
-        </div>
+        <template v-if="totalFilteredNotes === 0">
+          <Transition name="empty-state" mode="out-in">
+            <div v-if="searchQuery" class="empty-state" key="search-empty">
+              <div class="empty-icon">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.35-4.35" />
+                  <path d="M16 8a8 8 0 0 0-8 0" />
+                </svg>
+              </div>
+              <h3 class="empty-title">Nenhuma anotação encontrada</h3>
+              <p class="empty-subtitle">Tente pesquisar por outro termo</p>
+            </div>
 
-        <div v-else-if="totalFilteredNotes === 0" class="empty-state">
-          <p>Nenhuma anotação ainda</p>
-          <p class="empty-subtitle">Comece escrevendo sua primeira anotação abaixo</p>
-        </div>
+            <div v-else class="empty-state" key="no-notes">
+              <div class="empty-icon">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                  <polyline points="14,2 14,8 20,8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <polyline points="10,9 9,9 8,9" />
+                </svg>
+              </div>
+              <h3 class="empty-title">Nenhuma anotação ainda</h3>
+              <p class="empty-subtitle">Comece escrevendo sua primeira anotação abaixo</p>
+            </div>
+          </Transition>
+        </template>
 
-        <div v-else>
+        <template v-else>
           <div v-for="(notes, dateKey) in filteredGroupedNotes" :key="dateKey" class="date-group">
             <DateHeader :date-label="String(dateKey)" />
             <div class="notes-group">
@@ -170,7 +196,7 @@ const convertFileToBase64 = (file: File): Promise<string> => {
               </TransitionGroup>
             </div>
           </div>
-        </div>
+        </template>
       </div>
     </main>
 
@@ -178,8 +204,14 @@ const convertFileToBase64 = (file: File): Promise<string> => {
     <div class="search-container">
       <div class="search-input-wrapper" :class="{ 'expanded': isSearchExpanded }">
         <input v-model="searchQuery" type="text" :placeholder="isSearchExpanded ? 'Pesquisar' : 'Pesquisar'"
-          class="search-input" :class="{ 'expanded': isSearchExpanded }" @focus="expandSearch"
-          @blur="handleSearchBlur" />
+          class="search-input" :class="{ 'expanded': isSearchExpanded, 'has-content': searchQuery.trim() }"
+          @focus="expandSearch" @blur="handleSearchBlur" />
+        <button v-if="searchQuery.trim()" @click="clearSearch" class="clear-search-btn" aria-label="Limpar pesquisa">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
       </div>
     </div>
     <!-- Input para Nova Anotação -->
@@ -293,6 +325,16 @@ const convertFileToBase64 = (file: File): Promise<string> => {
   user-select: text;
 }
 
+.search-input-wrapper:has(.clear-search-btn) .search-input {
+  padding-right: 45px;
+  /* Espaço para o botão de limpar */
+}
+
+/* Fallback para navegadores que não suportam :has() */
+.search-input.has-content {
+  padding-right: 45px;
+}
+
 .search-input.expanded {
   /* Estado expandido - maior */
   width: 350px;
@@ -354,6 +396,49 @@ const convertFileToBase64 = (file: File): Promise<string> => {
     0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
+.clear-search-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%) scale(0.8);
+  background: rgba(108, 117, 125, 0.1);
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6c757d;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  opacity: 0;
+  animation: clearBtnAppear 0.3s ease-out 0.1s forwards;
+}
+
+.clear-search-btn:hover {
+  background: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+  transform: translateY(-50%) scale(1);
+}
+
+.clear-search-btn:active {
+  transform: translateY(-50%) scale(0.9);
+  background: rgba(220, 53, 69, 0.2);
+}
+
+@keyframes clearBtnAppear {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.5);
+  }
+
+  100% {
+    opacity: 0.8;
+    transform: translateY(-50%) scale(1);
+  }
+}
+
 .notes-container {
   margin-bottom: 20px;
 }
@@ -384,7 +469,7 @@ const convertFileToBase64 = (file: File): Promise<string> => {
 }
 
 .note-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .note-enter-from {
@@ -393,7 +478,11 @@ const convertFileToBase64 = (file: File): Promise<string> => {
 
 .note-leave-to {
   opacity: 0;
-  transform: translateX(100px) scale(0.9);
+  transform: translateX(-50px) scale(0.9);
+  max-height: 0;
+  margin-bottom: 0;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .note-move {
@@ -419,13 +508,108 @@ const convertFileToBase64 = (file: File): Promise<string> => {
 
 .empty-state {
   text-align: center;
-  padding: 40px 20px;
+  padding: 60px 20px;
   color: #6c757d;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  animation: emptyStateAppear 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.empty-icon {
+  margin-bottom: 24px;
+  color: #bdc3c7;
+  animation: iconFloat 3s ease-in-out infinite;
+}
+
+.empty-icon svg {
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+}
+
+.empty-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #495057;
+  margin: 0 0 12px 0;
+  animation: titleSlideUp 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
 }
 
 .empty-subtitle {
-  font-size: 14px;
-  margin-top: 8px;
+  font-size: 16px;
+  margin: 0;
+  color: #6c757d;
+  line-height: 1.5;
+  animation: subtitleSlideUp 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s both;
+}
+
+/* Animações do estado vazio */
+@keyframes emptyStateAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes iconFloat {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes titleSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes subtitleSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Transições do estado vazio */
+.empty-state-enter-active {
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.empty-state-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 1, 1);
+}
+
+.empty-state-enter-from {
+  opacity: 0;
+  transform: scale(0.8) translateY(30px);
+}
+
+.empty-state-leave-to {
+  opacity: 0;
+  transform: scale(0.9) translateY(-20px);
 }
 
 .app-footer {
@@ -654,6 +838,35 @@ const convertFileToBase64 = (file: File): Promise<string> => {
 
   .search-input.expanded {
     width: 100%;
+  }
+
+  .empty-state {
+    padding: 40px 16px;
+    min-height: 250px;
+  }
+
+  .empty-icon svg {
+    width: 48px;
+    height: 48px;
+  }
+
+  .empty-title {
+    font-size: 18px;
+  }
+
+  .empty-subtitle {
+    font-size: 14px;
+  }
+
+  .clear-search-btn {
+    width: 24px;
+    height: 24px;
+    right: 8px;
+  }
+
+  .clear-search-btn svg {
+    width: 14px;
+    height: 14px;
   }
 }
 
