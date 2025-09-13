@@ -16,6 +16,11 @@ defineProps<Props>()
 .date-header {
   padding: 16px 0 8px 0;
   margin-top: 24px;
+  /* Desabilitar seleção de texto no cabeçalho de data */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .date-header:first-child {

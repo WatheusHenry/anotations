@@ -1,3 +1,5 @@
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
+<!-- eslint-disable @typescript-eslint/no-unused-vars -->
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useNotesStore } from '@/stores/notes'
@@ -14,7 +16,7 @@ const addNote = async () => {
   if (newNote.value.trim()) {
     await notesStore.addNote(newNote.value)
     newNote.value = ''
-    
+
     // Animação de feedback no input
     const inputContainer = document.querySelector('.input-container')
     if (inputContainer) {
@@ -48,7 +50,6 @@ const collapseSearch = () => {
 }
 
 const handleSearchBlur = () => {
-  // Delay para permitir que o usuário clique em outros elementos
   setTimeout(() => {
     if (!searchQuery.value.trim()) {
       isSearchExpanded.value = false
@@ -60,20 +61,20 @@ const filteredGroupedNotes = computed(() => {
   if (!searchQuery.value.trim()) {
     return notesStore.groupedNotesByDate
   }
-  
+
   const filtered: { [key: string]: any[] } = {}
   const searchTerm = searchQuery.value.toLowerCase()
-  
+
   Object.entries(notesStore.groupedNotesByDate).forEach(([dateKey, notes]) => {
     const filteredNotes = notes.filter(note =>
       note.content.toLowerCase().includes(searchTerm)
     )
-    
+
     if (filteredNotes.length > 0) {
       filtered[dateKey] = filteredNotes
     }
   })
-  
+
   return filtered
 })
 
@@ -92,24 +93,24 @@ const triggerImageUpload = () => {
 const handleImageUpload = async (event: Event) => {
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
-  
+
   if (file) {
     // Verificar se é uma imagem
     if (!file.type.startsWith('image/')) {
-      alert('Por favor, selecione apenas arquivos de imagem.')
+      alert('Por favor, selecione apenas arquivos de imagem (JPG, PNG, GIF, etc.).')
       return
     }
-    
+
     // Verificar tamanho (máximo 5MB)
     if (file.size > 5 * 1024 * 1024) {
       alert('A imagem é muito grande. Por favor, selecione uma imagem menor que 5MB.')
       return
     }
-    
+
     try {
       const imageData = await convertFileToBase64(file)
       await notesStore.addImageNote(imageData, file.name)
-      
+
       // Feedback visual
       const inputContainer = document.querySelector('.input-container')
       if (inputContainer) {
@@ -122,7 +123,7 @@ const handleImageUpload = async (event: Event) => {
       console.error('Erro ao processar imagem:', error)
       alert('Erro ao processar a imagem. Tente novamente.')
     }
-    
+
     // Limpar input
     target.value = ''
   }
@@ -154,31 +155,18 @@ const convertFileToBase64 = (file: File): Promise<string> => {
         <div v-if="totalFilteredNotes === 0 && searchQuery" class="empty-state">
           <p>Nenhuma anotação encontrada</p>
         </div>
-        
+
         <div v-else-if="totalFilteredNotes === 0" class="empty-state">
           <p>Nenhuma anotação ainda</p>
           <p class="empty-subtitle">Comece escrevendo sua primeira anotação abaixo</p>
         </div>
 
         <div v-else>
-          <div 
-            v-for="(notes, dateKey) in filteredGroupedNotes" 
-            :key="dateKey"
-            class="date-group"
-          >
+          <div v-for="(notes, dateKey) in filteredGroupedNotes" :key="dateKey" class="date-group">
             <DateHeader :date-label="String(dateKey)" />
             <div class="notes-group">
-              <TransitionGroup
-                name="note"
-                tag="div"
-                class="notes-list"
-              >
-                <NoteCard
-                  v-for="note in notes"
-                  :key="note.id"
-                  :note="note"
-                  @delete="deleteNote"
-                />
+              <TransitionGroup name="note" tag="div" class="notes-list">
+                <NoteCard v-for="note in notes" :key="note.id" :note="note" @delete="deleteNote" />
               </TransitionGroup>
             </div>
           </div>
@@ -186,64 +174,38 @@ const convertFileToBase64 = (file: File): Promise<string> => {
       </div>
     </main>
 
-      <!-- Barra de Pesquisa -->
-        <div class="search-container">
-          <div class="search-input-wrapper" :class="{ 'expanded': isSearchExpanded }">
-            <input
-              v-model="searchQuery"
-              type="text"
-              :placeholder="isSearchExpanded ? 'Pesquisar' : 'Pesquisar'"
-              class="search-input"
-              :class="{ 'expanded': isSearchExpanded }"
-              @focus="expandSearch"
-              @blur="handleSearchBlur"
-            />
-          </div>
-        </div>
+    <!-- Barra de Pesquisa -->
+    <div class="search-container">
+      <div class="search-input-wrapper" :class="{ 'expanded': isSearchExpanded }">
+        <input v-model="searchQuery" type="text" :placeholder="isSearchExpanded ? 'Pesquisar' : 'Pesquisar'"
+          class="search-input" :class="{ 'expanded': isSearchExpanded }" @focus="expandSearch"
+          @blur="handleSearchBlur" />
+      </div>
+    </div>
     <!-- Input para Nova Anotação -->
     <footer class="app-footer">
       <div class="input-container">
-        <textarea
-          v-model="newNote"
-          placeholder="Salvar uma nota..."
-          class="note-input"
-          rows="1"
-          @keypress="handleKeyPress"
-        ></textarea>
+        <textarea v-model="newNote" placeholder="Salvar uma nota..." class="note-input" rows="1"
+          @keypress="handleKeyPress"></textarea>
         <div class="action-buttons">
-          <button
-            @click="triggerImageUpload"
-            class="camera-btn"
-            aria-label="Adicionar foto"
-          >
+          <button @click="triggerImageUpload" class="image-btn" aria-label="Adicionar imagem">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-              <circle cx="12" cy="13" r="4"/>
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21,15 16,10 5,21" />
             </svg>
           </button>
-          <button
-            @click="addNote"
-            :disabled="!newNote.trim()"
-            class="send-btn"
-            aria-label="Adicionar anotação"
-          >
+          <button @click="addNote" :disabled="!newNote.trim()" class="send-btn" aria-label="Adicionar anotação">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="22" y1="2" x2="11" y2="13"/>
-              <polygon points="22,2 15,22 11,13 2,9 22,2"/>
+              <line x1="22" y1="2" x2="11" y2="13" />
+              <polygon points="22,2 15,22 11,13 2,9 22,2" />
             </svg>
           </button>
         </div>
       </div>
-      
+
       <!-- Input de arquivo oculto -->
-      <input
-        ref="fileInput"
-        type="file"
-        accept="image/*"
-        capture="environment"
-        @change="handleImageUpload"
-        style="display: none"
-      />
+      <input ref="fileInput" type="file" accept="image/*" @change="handleImageUpload" style="display: none" />
     </footer>
   </div>
 </template>
@@ -254,6 +216,13 @@ const convertFileToBase64 = (file: File): Promise<string> => {
   background: #ffffff;
   display: flex;
   flex-direction: column;
+  /* Desabilitar seleção de texto em toda a aplicação */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  /* Desabilitar highlight de toque no mobile */
+  -webkit-tap-highlight-color: transparent;
 }
 
 .app-header {
@@ -313,10 +282,15 @@ const convertFileToBase64 = (file: File): Promise<string> => {
   text-align: center;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   transform-origin: center;
-  box-shadow: 
-    0 3px 30px rgba(0, 0, 0, 0.2),  
+  box-shadow:
+    0 3px 30px rgba(0, 0, 0, 0.2),
     0 1px 3px rgba(0, 0, 0, 0.1);
   width: 280px;
+  /* Permitir seleção no input de pesquisa */
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
 }
 
 .search-input.expanded {
@@ -332,9 +306,11 @@ const convertFileToBase64 = (file: File): Promise<string> => {
   0% {
     transform: scaleX(1);
   }
+
   50% {
     transform: scaleX(1.08);
   }
+
   100% {
     transform: scaleX(1);
   }
@@ -344,9 +320,11 @@ const convertFileToBase64 = (file: File): Promise<string> => {
   0% {
     transform: scaleX(1);
   }
+
   50% {
     transform: scaleX(0.95);
   }
+
   100% {
     transform: scaleX(1);
   }
@@ -370,9 +348,9 @@ const convertFileToBase64 = (file: File): Promise<string> => {
   border-color: #007bff;
   background: #ffffff;
   color: #212529;
-  box-shadow: 
-    0 3px 30px rgba(0, 0, 0, 0.25),    
-    0 1px 3px rgba(0, 0, 0, 0.1),    
+  box-shadow:
+    0 3px 30px rgba(0, 0, 0, 0.25),
+    0 1px 3px rgba(0, 0, 0, 0.1),
     0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
@@ -427,10 +405,12 @@ const convertFileToBase64 = (file: File): Promise<string> => {
     opacity: 0;
     transform: translateY(-30px) scale(0.9);
   }
+
   60% {
     opacity: 0.8;
     transform: translateY(5px) scale(1.02);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -459,10 +439,10 @@ const convertFileToBase64 = (file: File): Promise<string> => {
   border-radius: 2.5rem 2.5rem 0 0;
   padding: 20px 50px;
   z-index: 10;
-  box-shadow: 
-    0 3px 30px rgba(0, 0, 0, 0.2),  
+  box-shadow:
+    0 3px 30px rgba(0, 0, 0, 0.2),
     0 1px 3px rgba(0, 0, 0, 0.1);
-  }
+}
 
 .input-container {
   display: flex;
@@ -474,7 +454,7 @@ const convertFileToBase64 = (file: File): Promise<string> => {
   border: 1px solid #EAE4E4;
   border-radius: 20px;
   padding: 4px;
-  box-shadow: 
+  box-shadow:
     0 2px 15px rgba(0, 0, 0, 0.1),
     0 1px 3px rgba(0, 0, 0, 0.05);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -501,6 +481,11 @@ const convertFileToBase64 = (file: File): Promise<string> => {
   max-height: 120px;
   background: transparent !important;
   color: #212529;
+  /* Permitir seleção no textarea de nova nota */
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
 }
 
 .note-input:focus {
@@ -531,14 +516,16 @@ const convertFileToBase64 = (file: File): Promise<string> => {
     transform: scale(1);
     border-color: #EAE4E4;
   }
+
   50% {
     transform: scale(1.02);
     border-color: #28a745;
-    box-shadow: 
+    box-shadow:
       0 4px 20px rgba(0, 0, 0, 0.15),
       0 2px 8px rgba(0, 0, 0, 0.1),
       0 0 0 3px rgba(40, 167, 69, 0.2);
   }
+
   100% {
     transform: scale(1);
     border-color: #EAE4E4;
@@ -584,7 +571,7 @@ const convertFileToBase64 = (file: File): Promise<string> => {
   transform: none;
 }
 
-.camera-btn {
+.image-btn {
   background: transparent;
   border: none;
   border-radius: 50%;
@@ -599,13 +586,13 @@ const convertFileToBase64 = (file: File): Promise<string> => {
   flex-shrink: 0;
 }
 
-.camera-btn:hover {
+.image-btn:hover {
   background: rgba(0, 123, 255, 0.1);
   color: #0056b3;
   transform: scale(1.1);
 }
 
-.camera-btn:active {
+.image-btn:active {
   transform: scale(0.95);
 }
 
@@ -614,41 +601,42 @@ const convertFileToBase64 = (file: File): Promise<string> => {
   .app-header {
     padding: 16px;
   }
-  
+
   .app-title {
     font-size: 20px;
   }
-  
+
   .app-main {
     padding: 12px;
     padding-bottom: 100px;
   }
-  
+
   .app-footer {
     height: 110px;
     padding: 22px 12px 50px 12px;
-    
+
   }
-  
+
   .input-container {
     padding-inline: 10px;
   }
-  
+
   .note-input {
     padding: 12px 14px;
     min-height: 36px;
   }
-  
+
   .send-btn {
     width: 36px;
     height: 36px;
   }
-  
+
   /* Ajustes do input de pesquisa para mobile */
   .search-input {
-    width: 130px; /* Tamanho maior para não cortar "Pesquisar" */
+    width: 130px;
+    /* Tamanho maior para não cortar "Pesquisar" */
   }
-  
+
   .search-input.expanded {
     width: 100%;
   }
@@ -659,11 +647,11 @@ const convertFileToBase64 = (file: File): Promise<string> => {
   .search-container {
     min-width: 140px;
   }
-  
+
   .search-input {
     width: 120px;
   }
-  
+
   .search-input.expanded {
     width: 100%;
   }
@@ -674,9 +662,34 @@ const convertFileToBase64 = (file: File): Promise<string> => {
   .app-header {
     padding-top: env(safe-area-inset-top, 20px);
   }
-  
+
   .app-footer {
     padding-bottom: env(safe-area-inset-bottom, 16px);
   }
+}
+
+/* Regras globais para desabilitar seleção */
+button,
+svg,
+.empty-state,
+.action-buttons {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Garantir que imagens não sejam selecionáveis */
+img {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-user-drag: none !important;
+  -khtml-user-drag: none !important;
+  -moz-user-drag: none !important;
+  -o-user-drag: none !important;
+  user-drag: none !important;
 }
 </style>

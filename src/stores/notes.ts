@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { notesDB, type Note } from '@/utils/indexedDB'
@@ -11,13 +12,13 @@ export const useNotesStore = defineStore('notes', () => {
   const loadNotes = async () => {
     try {
       await notesDB.init()
-      
+
       // Verificar se há dados no localStorage para migrar
       const localStorageNotes = localStorage.getItem('notes')
       if (localStorageNotes) {
         await notesDB.migrateFromLocalStorage()
       }
-      
+
       const loadedNotes = await notesDB.getAllNotes()
       notes.value = loadedNotes
     } catch (error) {
@@ -44,7 +45,7 @@ export const useNotesStore = defineStore('notes', () => {
 
   const groupedNotesByDate = computed(() => {
     const groups: { [key: string]: Note[] } = {}
-    
+
     sortedNotes.value.forEach(note => {
       const dateKey = formatDateKey(note.createdAt)
       if (!groups[dateKey]) {
@@ -52,21 +53,21 @@ export const useNotesStore = defineStore('notes', () => {
       }
       groups[dateKey].push(note)
     })
-    
+
     return groups
   })
 
   const formatDateKey = (date: Date) => {
     const today = new Date()
     const noteDate = new Date(date)
-    
+
     // Resetar horas para comparação apenas de datas
     today.setHours(0, 0, 0, 0)
     noteDate.setHours(0, 0, 0, 0)
-    
+
     const diffTime = today.getTime() - noteDate.getTime()
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    
+
     if (diffDays === 0) {
       return 'Hoje'
     } else if (diffDays === 1) {
@@ -90,7 +91,7 @@ export const useNotesStore = defineStore('notes', () => {
         createdAt: new Date(),
         type: 'text'
       }
-      
+
       try {
         await notesDB.addNote(newNote)
         notes.value.push(newNote)
@@ -116,7 +117,7 @@ export const useNotesStore = defineStore('notes', () => {
       imageData,
       imageName
     }
-    
+
     try {
       await notesDB.addNote(newNote)
       notes.value.push(newNote)
@@ -154,18 +155,18 @@ export const useNotesStore = defineStore('notes', () => {
   const formatDate = (date: Date) => {
     const today = new Date()
     const noteDate = new Date(date)
-    
+
     if (noteDate.toDateString() === today.toDateString()) {
       return 'Hoje'
     }
-    
+
     const yesterday = new Date(today)
     yesterday.setDate(yesterday.getDate() - 1)
-    
+
     if (noteDate.toDateString() === yesterday.toDateString()) {
       return 'Ontem'
     }
-    
+
     return noteDate.toLocaleDateString('pt-BR', {
       day: 'numeric',
       month: 'long'

@@ -1,6 +1,7 @@
 <template>
-  <div 
+  <div
     class="note-card"
+    :class="{ 'long-pressing': isLongPressing }"
     @touchstart="handleTouchStart"
     @touchend="handleTouchEnd"
     @touchcancel="handleTouchEnd"
@@ -12,21 +13,21 @@
     <div class="note-content">
       <!-- Exibir imagem se for uma nota de imagem -->
       <div v-if="note.type === 'image' && note.imageData" class="note-image-container">
-        <img 
-          :src="note.imageData" 
+        <img
+          :src="note.imageData"
           :alt="note.imageName || 'Imagem da anotação'"
           class="note-image"
           @click="openImageModal"
         />
         <div v-if="note.imageName" class="image-name">{{ note.imageName }}</div>
       </div>
-      
+
       <!-- Exibir texto se houver -->
       <div v-if="note.content" class="note-text">
         {{ note.content }}
       </div>
     </div>
-    <button 
+    <button
       class="copy-btn"
       @click.stop="copyToClipboard"
       @mousedown.stop
@@ -79,13 +80,13 @@ const copied = ref(false)
 const showMenu = ref(false)
 const menuPosition = ref({ top: '0px', left: '0px' })
 const longPressTimer = ref<number | null>(null)
-const longPressDuration = 500 // 500ms para ativar
+const longPressDuration = 400 // 400ms para ativar (mais rápido)
 const isLongPressing = ref(false)
 
 const copyToClipboard = async () => {
   try {
     let textToCopy = props.note.content
-    
+
     // Se for uma imagem, copiar o nome do arquivo ou uma descrição
     if (props.note.type === 'image') {
       textToCopy = props.note.imageName || 'Imagem da anotação'
@@ -93,28 +94,28 @@ const copyToClipboard = async () => {
         textToCopy += ` - ${props.note.content}`
       }
     }
-    
+
     await navigator.clipboard.writeText(textToCopy)
     copied.value = true
-    
+
     // Reset o estado após 2 segundos
     setTimeout(() => {
       copied.value = false
     }, 2000)
   } catch (error) {
     console.error('Erro ao copiar para área de transferência:', error)
-    
+
     // Fallback para navegadores mais antigos
     try {
       let textToCopy = props.note.content
-      
+
       if (props.note.type === 'image') {
         textToCopy = props.note.imageName || 'Imagem da anotação'
         if (props.note.content) {
           textToCopy += ` - ${props.note.content}`
         }
       }
-      
+
       const textArea = document.createElement('textarea')
       textArea.value = textToCopy
       textArea.style.position = 'fixed'
@@ -125,7 +126,7 @@ const copyToClipboard = async () => {
       textArea.select()
       document.execCommand('copy')
       textArea.remove()
-      
+
       copied.value = true
       setTimeout(() => {
         copied.value = false
@@ -164,7 +165,7 @@ const handleTouchStart = (event: TouchEvent) => {
   if (event.target && (event.target as Element).closest('.copy-btn')) {
     return // Não ativar long press no botão de copiar
   }
-  
+
   const touch = event.touches[0]
   startLongPress(touch.clientX, touch.clientY)
 }
@@ -178,7 +179,7 @@ const handleMouseDown = (event: MouseEvent) => {
   if (event.target && (event.target as Element).closest('.copy-btn')) {
     return // Não ativar long press no botão de copiar
   }
-  
+
   // Só ativar long press no botão esquerdo
   if (event.button === 0) {
     startLongPress(event.clientX, event.clientY)
@@ -202,9 +203,9 @@ const handleContextMenu = (event: MouseEvent) => {
 const startLongPress = (x: number, y: number) => {
   // Cancelar qualquer timer anterior
   cancelLongPress()
-  
+
   isLongPressing.value = true
-  
+
   longPressTimer.value = window.setTimeout(() => {
     if (isLongPressing.value) {
       showContextMenu(x, y)
@@ -215,7 +216,7 @@ const startLongPress = (x: number, y: number) => {
 // Cancelar Long Press
 const cancelLongPress = () => {
   isLongPressing.value = false
-  
+
   if (longPressTimer.value) {
     clearTimeout(longPressTimer.value)
     longPressTimer.value = null
@@ -226,24 +227,41 @@ const cancelLongPress = () => {
 const showContextMenu = (x?: number, y?: number) => {
   // Esconder menu anterior primeiro
   hideContextMenu()
-  
+
   if (x !== undefined && y !== undefined) {
     // Usar setTimeout para garantir que a posição seja calculada corretamente
     setTimeout(() => {
-      const menuWidth = 120
-      const menuHeight = 50
+      const menuWidth = 140
+      const menuHeight = 60
       const viewportWidth = window.innerWidth
       const viewportHeight = window.innerHeight
-      const padding = 10
-      
-      let adjustedX = Math.max(padding, Math.min(x, viewportWidth - menuWidth - padding))
-      let adjustedY = Math.max(padding, Math.min(y, viewportHeight - menuHeight - padding))
-      
+      const padding = 16
+
+      // Calcular posição ajustada para não sair da tela
+      let adjustedX = x
+      let adjustedY = y
+
+      // Ajustar X (horizontal)
+      if (x + menuWidth + padding > viewportWidth) {
+        adjustedX = x - menuWidth - padding
+      }
+      if (adjustedX < padding) {
+        adjustedX = padding
+      }
+
+      // Ajustar Y (vertical)
+      if (y + menuHeight + padding > viewportHeight) {
+        adjustedY = y - menuHeight - padding
+      }
+      if (adjustedY < padding) {
+        adjustedY = padding
+      }
+
       menuPosition.value = {
         top: `${adjustedY}px`,
         left: `${adjustedX}px`
       }
-      
+
       showMenu.value = true
     }, 10)
   } else {
@@ -258,7 +276,11 @@ const hideContextMenu = () => {
 
 // Excluir nota
 const deleteNote = () => {
-  emit('delete', props.note.id)
+  // Confirmação antes de excluir
+  const confirmDelete = confirm('Tem certeza que deseja excluir esta anotação?')
+  if (confirmDelete) {
+    emit('delete', props.note.id)
+  }
   hideContextMenu()
 }
 
@@ -266,7 +288,7 @@ const deleteNote = () => {
 const handleGlobalClick = (event: Event) => {
   if (showMenu.value && event.target) {
     const target = event.target as Element
-    if (!target.closest('.context-menu') && !target.closest('.note-card')) {
+    if (!target.closest('.context-menu')) {
       hideContextMenu()
     }
   }
@@ -293,11 +315,24 @@ onUnmounted(() => {
   /* border: 1px solid #e9ecef; */
   transition: all 0.2s ease;
   position: relative;
+  /* Desabilitar seleção de texto no card */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  /* Desabilitar highlight de toque no mobile */
+  -webkit-tap-highlight-color: transparent;
 }
 
 .note-card:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.note-card.long-pressing {
+  transform: scale(0.98);
+  background: #e0e0e0;
+  transition: all 0.1s ease;
 }
 
 
@@ -383,7 +418,7 @@ onUnmounted(() => {
   border-radius: 8px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
   padding: 4px;
-  z-index: 1000;
+  z-index: 9999;
   min-width: 120px;
   animation: menuFadeIn 0.2s ease-out;
 }
@@ -404,18 +439,21 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 10px 12px;
+  padding: 12px 16px;
   border: none;
   background: none;
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
+  font-weight: 500;
   color: #212529;
   transition: all 0.2s ease;
+  text-align: left;
 }
 
 .menu-item:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0, 0.08);
+  transform: translateX(2px);
 }
 
 .delete-item {
@@ -423,8 +461,9 @@ onUnmounted(() => {
 }
 
 .delete-item:hover {
-  background: rgba(220, 53, 69, 0.1);
+  background: rgba(220, 53, 69, 0.15);
   color: #dc3545;
+  transform: translateX(2px);
 }
 
 .menu-overlay {
@@ -433,7 +472,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 999;
+  z-index: 9998;
   background: transparent;
 }
 </style>
