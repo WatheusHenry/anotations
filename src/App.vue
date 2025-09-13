@@ -19,8 +19,14 @@ const isSwipingUp = ref(false)
 const swipeStartY = ref(0)
 const swipeStartTime = ref(0)
 
+// Debounce para prevenir múltiplos cliques
+const isProcessing = ref(false)
+const debounceTime = 300 // ms
+
 const addNote = async () => {
-  if (newNote.value.trim() && !isAddingNote.value) {
+  // Prevenir múltiplos cliques/submissões
+  if (newNote.value.trim() && !isAddingNote.value && !isProcessing.value) {
+    isProcessing.value = true
     isAddingNote.value = true
     const content = newNote.value.trim()
 
@@ -92,6 +98,10 @@ const addNote = async () => {
       }
     } finally {
       isAddingNote.value = false
+      // Reset do debounce após um tempo
+      setTimeout(() => {
+        isProcessing.value = false
+      }, debounceTime)
     }
   }
 }
@@ -174,10 +184,14 @@ const triggerImageUpload = () => {
 }
 
 const handleImageUpload = async (event: Event) => {
+  // Prevenir múltiplos uploads
+  if (isProcessing.value) return
+
   const target = event.target as HTMLInputElement
   const file = target.files?.[0]
 
   if (file) {
+    isProcessing.value = true
     // Verificar se é uma imagem
     if (!file.type.startsWith('image/')) {
       alert('Por favor, selecione apenas arquivos de imagem (JPG, PNG, GIF, etc.).')
@@ -214,6 +228,11 @@ const handleImageUpload = async (event: Event) => {
 
     // Limpar input
     target.value = ''
+
+    // Reset do debounce
+    setTimeout(() => {
+      isProcessing.value = false
+    }, debounceTime)
   }
 }
 
@@ -304,6 +323,62 @@ const fetchLinkPreview = async (url: string) => {
 
   return fallbackData()
 }
+
+// Prevenir zoom e gestos indesejados
+const preventZoom = () => {
+  // Prevenir zoom com gestos
+  document.addEventListener('gesturestart', (e) => {
+    e.preventDefault()
+  }, { passive: false })
+
+  document.addEventListener('gesturechange', (e) => {
+    e.preventDefault()
+  }, { passive: false })
+
+  document.addEventListener('gestureend', (e) => {
+    e.preventDefault()
+  }, { passive: false })
+
+  // Prevenir zoom duplo-clique
+  let lastTouchEnd = 0
+  document.addEventListener('touchend', (e) => {
+    const now = Date.now()
+    if (now - lastTouchEnd <= 300) {
+      e.preventDefault()
+    }
+    lastTouchEnd = now
+  }, { passive: false })
+
+  // Prevenir zoom com roda do mouse + Ctrl
+  document.addEventListener('wheel', (e) => {
+    if (e.ctrlKey) {
+      e.preventDefault()
+    }
+  }, { passive: false })
+
+  // Prevenir zoom com teclado
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '0')) {
+      e.preventDefault()
+    }
+  })
+}
+
+// Função utilitária de debounce
+const debounce = (func: Function, wait: number) => {
+  let timeout: NodeJS.Timeout
+  return function executedFunction(...args: any[]) {
+    const later = () => {
+      clearTimeout(timeout)
+      func(...args)
+    }
+    clearTimeout(timeout)
+    timeout = setTimeout(later, wait)
+  }
+}
+
+// Inicializar prevenção de zoom
+preventZoom()
 
 // Funções para swipe up no input
 const handleSwipeStart = (event: TouchEvent) => {
@@ -471,6 +546,15 @@ const handleSwipeEnd = () => {
   user-select: none;
   /* Desabilitar highlight de toque no mobile */
   -webkit-tap-highlight-color: transparent;
+  /* Prevenir zoom e comportamentos indesejados */
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+  /* Prevenir scroll horizontal */
+  overflow-x: hidden;
+  /* Melhorar performance de scroll */
+  -webkit-overflow-scrolling: touch;
 }
 
 .app-header {
@@ -1163,12 +1247,32 @@ const handleSwipeEnd = () => {
 
 /* Ajustes para PWA */
 @media (display-mode: standalone) {
+  .app {
+    padding-top: env(safe-area-inset-top, 0);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+    padding-left: env(safe-area-inset-left, 0);
+    padding-right: env(safe-area-inset-right, 0);
+  }
+
   .app-header {
-    padding-top: env(safe-area-inset-top, 20px);
+    padding-top: calc(env(safe-area-inset-top, 0) + 20px);
   }
 
   .app-footer {
-    padding-bottom: env(safe-area-inset-bottom, 16px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0) + 16px);
+  }
+}
+
+/* Melhorias específicas para iOS PWA */
+@supports (-webkit-touch-callout: none) {
+  .app {
+    /* Prevenir bounce scroll no iOS */
+    overscroll-behavior-y: none;
+  }
+
+  body {
+    /* Fixar altura no iOS para evitar problemas com a barra de endereços */
+    height: -webkit-fill-available;
   }
 }
 
@@ -1195,5 +1299,44 @@ img {
   -moz-user-drag: none !important;
   -o-user-drag: none !important;
   user-drag: none !important;
+  /* Prevenir zoom em imagens */
+  touch-action: manipulation !important;
+}
+
+/* Estilos globais para prevenir zoom e melhorar PWA */
+* {
+  /* Prevenir zoom em elementos */
+  touch-action: manipulation;
+  /* Melhorar performance */
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+/* Prevenir zoom duplo-clique em toda a aplicação */
+html {
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+}
+
+body {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  /* Prevenir scroll bounce no iOS */
+  overscroll-behavior: none;
+  /* Fixar altura para PWA */
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  /* Melhorar scroll no mobile */
+  -webkit-overflow-scrolling: touch;
 }
 </style>
