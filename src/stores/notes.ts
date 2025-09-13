@@ -163,24 +163,37 @@ export const useNotesStore = defineStore('notes', () => {
   }
 
   const updateLinkNote = async (noteId: string, linkData: { title?: string, description?: string, image?: string }) => {
+    console.log('Tentando atualizar nota:', noteId, linkData)
     const noteIndex = notes.value.findIndex(note => note.id === noteId)
-    if (noteIndex === -1) return
+    if (noteIndex === -1) {
+      console.error('Nota não encontrada:', noteId)
+      return
+    }
 
     const note = notes.value[noteIndex]
-    if (note.type !== 'link') return
+    if (note.type !== 'link') {
+      console.error('Nota não é do tipo link:', note.type)
+      return
+    }
+
+    console.log('Nota antes da atualização:', note)
 
     // Atualizar dados do link
     if (linkData.title) note.linkTitle = linkData.title
     if (linkData.description) note.linkDescription = linkData.description
     if (linkData.image) note.linkImage = linkData.image
 
+    console.log('Nota após atualização:', note)
+
     try {
       await notesDB.updateNote(note)
+      console.log('Nota atualizada no IndexedDB')
     } catch (error) {
       console.error('Erro ao atualizar nota no IndexedDB:', error)
       // Fallback para localStorage
       try {
         localStorage.setItem('notes', JSON.stringify(notes.value))
+        console.log('Nota atualizada no localStorage')
       } catch (fallbackError) {
         console.error('Erro no fallback do localStorage:', fallbackError)
       }

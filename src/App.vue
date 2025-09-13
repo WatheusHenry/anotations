@@ -42,13 +42,14 @@ const addNote = async () => {
 
           // Buscar preview em background e atualizar
           fetchLinkPreview(url).then(linkData => {
+            console.log('Preview carregado:', linkData)
             notesStore.updateLinkNote(noteId, {
               title: linkData.title,
               description: linkData.description,
               image: linkData.image
             })
-          }).catch(() => {
-            // Preview falhou, manter dados básicos
+          }).catch((error) => {
+            console.error('Preview falhou:', error)
           })
 
         } catch (error) {
@@ -211,9 +212,8 @@ const convertFileToBase64 = (file: File): Promise<string> => {
 }
 
 const fetchLinkPreview = async (url: string) => {
-  console.log('Buscando preview para:', url)
+  console.log('🔍 Buscando preview para:', url)
 
-  // Fallback básico que sempre retorna dados válidos
   const fallbackData = () => {
     try {
       return {
@@ -222,63 +222,43 @@ const fetchLinkPreview = async (url: string) => {
         image: ''
       }
     } catch {
-      return {
-        title: url,
-        description: '',
-        image: ''
-      }
+      return { title: url, description: '', image: '' }
     }
   }
 
   try {
-    // Validar URL primeiro
-    new URL(url) // Isso vai lançar erro se URL for inválida
+    new URL(url) // Validar URL
 
-    // Usar um serviço de proxy para evitar problemas de CORS
     const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
+    console.log('📡 Proxy URL:', proxyUrl)
 
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 3000) // Reduzido para 3s
-
-    const response = await fetch(proxyUrl, {
-      signal: controller.signal,
-      headers: {
-        'Accept': 'application/json',
-      }
-    })
-
-    clearTimeout(timeoutId)
+    const response = await fetch(proxyUrl)
 
     if (!response.ok) {
-      console.warn(`HTTP ${response.status} para ${url}`)
+      console.warn('❌ Response not OK:', response.status)
       return fallbackData()
     }
 
     const data = await response.json()
+    console.log('📦 Data received:', !!data.contents)
 
     if (data.contents) {
-      const parser = new DOMParser()
-      const doc = parser.parseFromString(data.contents, 'text/html')
+      const doc = new DOMParser().parseFromString(data.contents, 'text/html')
 
-      // Extrair metadados Open Graph ou fallback para tags HTML básicas
       const title =
-        doc.querySelector('meta[property="og:title"]')?.getAttribute('content')?.trim() ||
-        doc.querySelector('meta[name="twitter:title"]')?.getAttribute('content')?.trim() ||
-        doc.querySelector('title')?.textContent?.trim() ||
+        doc.querySelector('meta[property="og:title"]')?.getAttribute('content') ||
+        doc.querySelector('title')?.textContent ||
         new URL(url).hostname
 
       const description =
-        doc.querySelector('meta[property="og:description"]')?.getAttribute('content')?.trim() ||
-        doc.querySelector('meta[name="twitter:description"]')?.getAttribute('content')?.trim() ||
-        doc.querySelector('meta[name="description"]')?.getAttribute('content')?.trim() ||
+        doc.querySelector('meta[property="og:description"]')?.getAttribute('content') ||
+        doc.querySelector('meta[name="description"]')?.getAttribute('content') ||
         ''
 
       let image =
         doc.querySelector('meta[property="og:image"]')?.getAttribute('content') ||
-        doc.querySelector('meta[name="twitter:image"]')?.getAttribute('content') ||
         ''
 
-      // Garantir que a imagem seja uma URL absoluta
       if (image && !image.startsWith('http')) {
         try {
           image = new URL(image, url).href
@@ -288,22 +268,20 @@ const fetchLinkPreview = async (url: string) => {
       }
 
       const result = {
-        title: title || new URL(url).hostname,
-        description: description || '',
+        title: title?.trim() || new URL(url).hostname,
+        description: description?.trim() || '',
         image: image || ''
       }
 
-      console.log('Preview encontrado:', result)
+      console.log('✅ Preview extraído:', result)
       return result
     }
+
   } catch (error) {
-    console.error('Erro ao buscar preview:', error)
+    console.error('❌ Erro:', error)
   }
 
-  // Sempre retornar dados válidos
-  const result = fallbackData()
-  console.log('Usando fallback:', result)
-  return result
+  return fallbackData()
 }
 </script>
 

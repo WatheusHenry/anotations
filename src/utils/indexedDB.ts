@@ -9,6 +9,7 @@ export interface Note {
   linkTitle?: string // Título da página
   linkDescription?: string // Descrição da página
   linkImage?: string // Imagem de preview do link
+  linkFavicon?: string // Favicon do site
 }
 
 class NotesDB {
