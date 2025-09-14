@@ -552,7 +552,7 @@ const detectiOS = () => {
           text-align: center;
           animation: slideUp 0.3s ease-out;
         ">
-          <div style="margin-bottom: 8px;">📱 Para compartilhar links com este app:</div>
+          <div style="margin-bottom: 8px;">📱 Para adicionar esse aplicativo:</div>
           <div style="font-size: 12px; opacity: 0.8;">
             Toque em <strong>Compartilhar</strong> → <strong>Adicionar à Tela Inicial</strong>
           </div>
