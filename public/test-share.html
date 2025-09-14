@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Share Target</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            margin: 10px 0;
+            cursor: pointer;
+            display: block;
+            width: 100%;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #007bff;
+        }
+    </style>
+</head>
+<body>
+    <h1>Teste Share Target API</h1>
+    
+    <div class="info">
+        <h3>Como testar no iPhone:</h3>
+        <ol>
+            <li>Adicione o app à tela inicial primeiro</li>
+            <li>Abra o YouTube ou Safari</li>
+            <li>Compartilhe um link</li>
+            <li>Procure por "Anotações" na lista de apps</li>
+        </ol>
+    </div>
+
+    <button class="test-button" onclick="testShare()">
+        Testar Web Share API (se suportado)
+    </button>
+
+    <button class="test-button" onclick="testManualShare()">
+        Simular Share Target Manual
+    </button>
+
+    <div id="result"></div>
+
+    <script>
+        async function testShare() {
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: 'Teste de Compartilhamento',
+                        text: 'Este é um teste do Share Target API',
+                        url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+                    });
+                    document.getElementById('result').innerHTML = '<p style="color: green;">Compartilhamento realizado com sucesso!</p>';
+                } catch (err) {
+                    document.getElementById('result').innerHTML = '<p style="color: red;">Erro: ' + err.message + '</p>';
+                }
+            } else {
+                document.getElementById('result').innerHTML = '<p style="color: orange;">Web Share API não suportada neste navegador</p>';
+            }
+        }
+
+        function testManualShare() {
+            const params = new URLSearchParams({
+                title: 'Rick Astley - Never Gonna Give You Up',
+                text: 'Música clássica do YouTube',
+                url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+            });
+            
+            window.location.href = '/?' + params.toString();
+        }
+
+        // Verificar se é PWA
+        window.addEventListener('load', () => {
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            
+            if (isIOS && !isStandalone) {
+                document.getElementById('result').innerHTML = '<p style="color: orange;">⚠️ Para testar Share Target, adicione o app à tela inicial primeiro!</p>';
+            } else if (isStandalone) {
+                document.getElementById('result').innerHTML = '<p style="color: green;">✅ App está rodando como PWA!</p>';
+            }
+        });
+    </script>
+</body>
+</html>

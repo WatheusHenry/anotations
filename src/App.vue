@@ -389,6 +389,8 @@ const handleShareTarget = async () => {
   const sharedText = urlParams.get('text')
   const sharedUrl = urlParams.get('url')
 
+  console.log('Share Target detectado:', { sharedTitle, sharedText, sharedUrl })
+
   // Se há dados compartilhados, processar
   if (sharedTitle || sharedText || sharedUrl) {
     let content = ''
@@ -525,8 +527,75 @@ const showShareErrorNotification = () => {
   }, 3000)
 }
 
-// Inicializar Share Target
+// Detectar iOS e mostrar instruções se necessário
+const detectiOS = () => {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone
+
+  if (isIOS && !isStandalone) {
+    // Mostrar instruções para adicionar à tela inicial no iOS
+    setTimeout(() => {
+      const instruction = document.createElement('div')
+      instruction.innerHTML = `
+        <div style="
+          position: fixed;
+          bottom: 20px;
+          left: 20px;
+          right: 20px;
+          background: rgba(0, 0, 0, 0.9);
+          color: white;
+          padding: 16px;
+          border-radius: 12px;
+          font-family: 'Onest', sans-serif;
+          font-size: 14px;
+          z-index: 10000;
+          text-align: center;
+          animation: slideUp 0.3s ease-out;
+        ">
+          <div style="margin-bottom: 8px;">📱 Para compartilhar links com este app:</div>
+          <div style="font-size: 12px; opacity: 0.8;">
+            Toque em <strong>Compartilhar</strong> → <strong>Adicionar à Tela Inicial</strong>
+          </div>
+          <button onclick="this.parentElement.parentElement.remove()" style="
+            background: white;
+            color: black;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            margin-top: 12px;
+            font-family: 'Onest', sans-serif;
+            font-weight: 500;
+            cursor: pointer;
+          ">Entendi</button>
+        </div>
+      `
+
+      const style = document.createElement('style')
+      style.textContent = `
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `
+      document.head.appendChild(style)
+      document.body.appendChild(instruction)
+
+      // Remover automaticamente após 10 segundos
+      setTimeout(() => {
+        if (document.body.contains(instruction)) {
+          instruction.remove()
+        }
+        if (document.head.contains(style)) {
+          style.remove()
+        }
+      }, 10000)
+    }, 2000)
+  }
+}
+
+// Inicializar Share Target e detecção iOS
 handleShareTarget()
+detectiOS()
 
 // Funções para swipe up no input
 const handleSwipeStart = (event: TouchEvent) => {
