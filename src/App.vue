@@ -613,7 +613,7 @@ const handleSwipeEnd = () => {
   border-radius: 25px;
   font-size: 16px;
   background: #FFFFFF;
-  color: #BFBFBF;
+  color: #6c757d;
   outline: none;
   text-align: center;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -683,12 +683,25 @@ const handleSwipeEnd = () => {
 }
 
 .search-input::placeholder {
-  color: #BFBFBF;
+  color: #6c757d;
   transition: opacity 0.3s ease;
 }
 
+.search-input::-webkit-input-placeholder {
+  color: #6c757d;
+}
+
+.search-input::-moz-placeholder {
+  color: #6c757d;
+  opacity: 1;
+}
+
+.search-input:-ms-input-placeholder {
+  color: #6c757d;
+}
+
 .search-input:not(.expanded)::placeholder {
-  opacity: 0.8;
+  opacity: 0.9;
 }
 
 .search-input:focus,
@@ -1070,8 +1083,21 @@ const handleSwipeEnd = () => {
 }
 
 .note-input::placeholder {
-  color: #BFBFBF;
+  color: #6c757d;
   transition: opacity 0.3s ease;
+}
+
+.note-input::-webkit-input-placeholder {
+  color: #6c757d;
+}
+
+.note-input::-moz-placeholder {
+  color: #6c757d;
+  opacity: 1;
+}
+
+.note-input:-ms-input-placeholder {
+  color: #6c757d;
 }
 
 .send-btn {

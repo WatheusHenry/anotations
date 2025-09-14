@@ -120,7 +120,7 @@ const dynamicFontSize = computed(() => {
   const noteType = props.note.type
 
   // Ajustar breakpoints baseado no tipo de nota
-  let baseFontSize = 18
+  let baseFontSize = 16
   let minFontSize = 12
 
   // Para links, usar fonte menor por padrão (já que há título e descrição)
