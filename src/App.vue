@@ -381,6 +381,153 @@ const debounce = (func: Function, wait: number) => {
 // Inicializar prevenção de zoom
 preventZoom()
 
+// Função para lidar com Share Target API
+const handleShareTarget = async () => {
+  // Verificar se foi aberto via share target
+  const urlParams = new URLSearchParams(window.location.search)
+  const sharedTitle = urlParams.get('title')
+  const sharedText = urlParams.get('text')
+  const sharedUrl = urlParams.get('url')
+
+  // Se há dados compartilhados, processar
+  if (sharedTitle || sharedText || sharedUrl) {
+    let content = ''
+
+    // Construir o conteúdo da nota
+    if (sharedTitle && sharedTitle !== sharedUrl) {
+      content += sharedTitle
+    }
+
+    if (sharedText && sharedText !== sharedTitle && sharedText !== sharedUrl) {
+      if (content) content += '\n\n'
+      content += sharedText
+    }
+
+    if (sharedUrl) {
+      if (content) content += '\n\n'
+      content += sharedUrl
+    }
+
+    // Se há conteúdo, salvar automaticamente
+    if (content.trim()) {
+      try {
+        // Detectar se é um link
+        const urlRegex = /(https?:\/\/[^\s]+)/g
+        const urls = content.match(urlRegex)
+
+        if (urls && urls.length > 0) {
+          // Se contém links, salvar como link
+          const url = urls[0]
+
+          const noteId = await notesStore.addLinkNote(
+            url,
+            sharedTitle || new URL(url).hostname,
+            '',
+            '',
+            content
+          )
+
+          // Buscar preview em background
+          fetchLinkPreview(url).then(linkData => {
+            notesStore.updateLinkNote(noteId, {
+              title: linkData.title,
+              description: linkData.description,
+              image: linkData.image,
+              favicon: `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=32`
+            })
+          }).catch(console.error)
+        } else {
+          // Salvar como nota normal
+          await notesStore.addNote(content)
+        }
+
+        // Limpar URL para evitar reprocessamento
+        window.history.replaceState({}, document.title, window.location.pathname)
+
+        // Mostrar feedback visual e notificação
+        showShareSuccessNotification()
+
+      } catch (error) {
+        console.error('Erro ao salvar conteúdo compartilhado:', error)
+        showShareErrorNotification()
+      }
+    }
+  }
+}
+
+// Função para mostrar notificação de sucesso
+const showShareSuccessNotification = () => {
+  const notification = document.createElement('div')
+  notification.innerHTML = `
+    <div style="
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #28a745;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-family: 'Onest', sans-serif;
+      font-weight: 500;
+      z-index: 10000;
+      box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+      animation: slideDown 0.3s ease-out;
+    ">
+      ✓ Conteúdo salvo com sucesso!
+    </div>
+  `
+
+  const style = document.createElement('style')
+  style.textContent = `
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+      to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+  `
+  document.head.appendChild(style)
+  document.body.appendChild(notification)
+
+  setTimeout(() => {
+    notification.style.animation = 'slideDown 0.3s ease-out reverse'
+    setTimeout(() => {
+      if (document.body.contains(notification)) document.body.removeChild(notification)
+      if (document.head.contains(style)) document.head.removeChild(style)
+    }, 300)
+  }, 3000)
+}
+
+// Função para mostrar notificação de erro
+const showShareErrorNotification = () => {
+  const notification = document.createElement('div')
+  notification.innerHTML = `
+    <div style="
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #dc3545;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-family: 'Onest', sans-serif;
+      font-weight: 500;
+      z-index: 10000;
+      box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    ">
+      ✗ Erro ao salvar conteúdo
+    </div>
+  `
+
+  document.body.appendChild(notification)
+  setTimeout(() => {
+    if (document.body.contains(notification)) document.body.removeChild(notification)
+  }, 3000)
+}
+
+// Inicializar Share Target
+handleShareTarget()
+
 // Funções para swipe up no input
 const handleSwipeStart = (event: TouchEvent) => {
   const touch = event.touches[0]

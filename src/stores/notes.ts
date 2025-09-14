@@ -162,7 +162,7 @@ export const useNotesStore = defineStore('notes', () => {
     return newNote.id
   }
 
-  const updateLinkNote = async (noteId: string, linkData: { title?: string, description?: string, image?: string }) => {
+  const updateLinkNote = async (noteId: string, linkData: { title?: string, description?: string, image?: string, favicon?: string }) => {
     console.log('Tentando atualizar nota:', noteId, linkData)
     const noteIndex = notes.value.findIndex(note => note.id === noteId)
     if (noteIndex === -1) {
@@ -182,6 +182,7 @@ export const useNotesStore = defineStore('notes', () => {
     if (linkData.title) note.linkTitle = linkData.title
     if (linkData.description) note.linkDescription = linkData.description
     if (linkData.image) note.linkImage = linkData.image
+    if (linkData.favicon) note.linkFavicon = linkData.favicon
 
     console.log('Nota após atualização:', note)
 
